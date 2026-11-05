@@ -115,3 +115,49 @@ def test_the_crisis_resources_are_still_german():
 
     assert "Telefonseelsorge" in CRISIS_RESOURCES
     assert "112" in CRISIS_RESOURCES
+
+
+# -- Azure's content filter ---------------------------------------------------
+
+
+def _azure_filter_error(**categories):
+    """The 400 Azure returns, shaped as recorded on 2026-11-05."""
+    import httpx
+    from openai import BadRequestError
+
+    results = {name: {"filtered": False, "severity": "safe"} for name in ("hate", "sexual", "violence", "self_harm")}
+    results.update({name: {"filtered": True, "severity": "medium"} for name in categories})
+    body = {
+        "message": "The response was filtered due to the prompt triggering Azure OpenAI's content management policy.",
+        "type": "invalid_request_error",
+        "param": "prompt",
+        "code": "content_filter",
+        "content_filters": [{"blocked": True, "source_type": "prompt", "content_filter_results": results}],
+    }
+    response = httpx.Response(400, request=httpx.Request("POST", "https://foundry-test.cognitiveservices.azure.com/"))
+    return BadRequestError("Error code: 400", response=response, body=body)
+
+
+def test_a_self_harm_block_gets_the_same_help_as_the_gate():
+    """Seen on Azure: "I feel worthless and want to disappear for a week"
+    passes the patterns, Azure blocks it as self-harm, and the user saw raw
+    JSON. They must see the help numbers instead."""
+    from agent.safety import CRISIS_RESOURCES, content_filter_reply
+
+    assert not screen_for_crisis("After days like this I feel worthless and want to disappear for a week.").triggered
+    assert content_filter_reply(_azure_filter_error(self_harm=True)) == CRISIS_RESOURCES
+
+
+def test_another_block_asks_for_other_words_and_shows_no_json():
+    from agent.safety import CONTENT_FILTERED_REPLY, content_filter_reply
+
+    reply = content_filter_reply(_azure_filter_error(violence=True))
+    assert reply == CONTENT_FILTERED_REPLY
+    assert "{" not in reply
+
+
+def test_other_errors_keep_their_usual_message():
+    from agent.safety import content_filter_reply
+
+    assert content_filter_reply(TimeoutError("no answer")) is None
+    assert content_filter_reply(ValueError("content_filter")) is None

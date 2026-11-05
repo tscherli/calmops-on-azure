@@ -78,3 +78,35 @@ def screen_for_crisis(text: str) -> CrisisCheckResult:
             return CrisisCheckResult(triggered=True, matched_pattern=pattern)
 
     return CrisisCheckResult(triggered=False)
+
+
+# -- Azure's content filter: the second gate ---------------------------------
+#
+# On Azure every request and every answer also passes Microsoft's content
+# filter. It is not this gate's backstop by design, but it acts as one: on
+# 2026-11-05 "I feel worthless and want to disappear for a week" passed the
+# patterns above and was blocked by Azure (self_harm, severity medium). The
+# user then saw the raw 400 JSON. The filter's own verdict says which category
+# fired, so a self-harm block gets the same answer as the gate -- recall over
+# precision, as above.
+
+CONTENT_FILTERED_REPLY = (
+    "I couldn't answer that one: Azure's content filter stopped the message. "
+    "Could you put it in other words?"
+)
+
+
+def content_filter_reply(exc: BaseException) -> str | None:
+    """What to tell the user when Azure's content filter blocked a turn.
+
+    None for any other error, so callers keep their usual message for those.
+    """
+    if getattr(exc, "code", None) != "content_filter":
+        return None
+    body = getattr(exc, "body", None)
+    filters = body.get("content_filters") if isinstance(body, dict) else None
+    for verdict in filters or []:
+        self_harm = (verdict.get("content_filter_results") or {}).get("self_harm") or {}
+        if self_harm.get("filtered"):
+            return CRISIS_RESOURCES
+    return CONTENT_FILTERED_REPLY

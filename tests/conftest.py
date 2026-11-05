@@ -21,6 +21,12 @@ import os
 os.environ["LANGSMITH_TRACING"] = "false"
 os.environ["LANGCHAIN_TRACING_V2"] = "false"   # legacy name, still honoured
 os.environ.setdefault("OPENAI_API_KEY", "sk-test-not-a-real-key")
+# Present but empty, so a real AZURE_OPENAI_ENDPOINT in `.env` cannot point
+# the suite at Azure and make it fetch Entra tokens.
+os.environ["AZURE_OPENAI_ENDPOINT"] = ""
+# The tests assume the default (search on) and switch it off themselves where
+# they need to, whatever a local `.env` says.
+os.environ["OPENAI_ENABLE_WEB_SEARCH"] = "true"
 
 # A second isolation the suite needs for the same reason as the tracing
 # switch above, found the same way -- by looking at the real file. See

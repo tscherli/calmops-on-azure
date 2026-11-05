@@ -34,7 +34,7 @@ from agent.data_paths import DATA_DIR_ENV, DEFAULT_CONSENT_PATH, DataPaths, data
 from agent.graph import build_agent, next_turn_state
 from agent.model import DEFAULT_MODEL
 from agent.prompts import choice_sentence
-from agent.safety import CRISIS_RESOURCES, screen_for_crisis
+from agent.safety import CRISIS_RESOURCES, content_filter_reply, screen_for_crisis
 from observability.tracing import RunRecorder
 from tools.checkin_log import Helpfulness, append_checkin_row, measures_awaiting_rating
 from tools.measures import Energy, Goal
@@ -613,7 +613,8 @@ class ChatApp:
                     self._append_tool_event(data)
                 elif kind == "error":
                     self._append_message(
-                        "App", f"Something went wrong and I couldn't process that: {data}"
+                        "App",
+                        content_filter_reply(data) or f"Something went wrong and I couldn't process that: {data}",
                     )
                     self._set_busy(False)
                     return

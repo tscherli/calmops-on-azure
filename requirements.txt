@@ -1,6 +1,8 @@
 langchain>=0.3.0
 langgraph>=0.2.0
 langchain-openai>=0.2.0
+# Entra ID login for the Azure model (agent/model.py), instead of an API key.
+azure-identity>=1.19
 python-dotenv>=1.0.0
 pandas>=2.2.0
 pytest>=8.0.0

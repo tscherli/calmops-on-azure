@@ -37,7 +37,7 @@ from agent.data_paths import DATA_DIR_ENV, DEFAULT_CONSENT_PATH, data_paths, pre
 from agent.graph import build_agent, next_turn_state
 from agent.model import DEFAULT_MODEL
 from agent.prompts import choice_sentence
-from agent.safety import CRISIS_RESOURCES, screen_for_crisis
+from agent.safety import CRISIS_RESOURCES, content_filter_reply, screen_for_crisis
 from observability.tracing import RunRecorder
 from tools.checkin_log import Helpfulness, append_checkin_row, measures_awaiting_rating
 from tools.measures import Energy, Goal
@@ -149,7 +149,7 @@ class Session:
                 decisions = self._decide(paused)
                 final, paused = self._stream(Command(resume={"decisions": decisions}), config)
         except Exception as exc:  # never let a traceback end the session
-            self.out(f"Something went wrong and I couldn't process that: {exc}")
+            self.out(content_filter_reply(exc) or f"Something went wrong and I couldn't process that: {exc}")
             return
 
         if final is None:
