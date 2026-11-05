@@ -369,7 +369,7 @@ For values rather than names, use the debugger: `.vscode/launch.json` has a conf
 
 ## Results & limitations
 
-**Current state: v1.3.0, whose agent is unchanged since v1.1.0, so the v1.1 results below stand.** 1094 passing tests, 26 eval cases (21 regression, 5 progression), an LLM judge calibrated against human labels, and the agent compared with itself without its measure lookup and with a no-tools model call. Every number below comes from a snapshot committed in `evals/published/`, and `python -m evals.summarize_runs` recounts any of them offline.
+**Current state: v1.1's agent, now also running on Microsoft Azure.** The agent is unchanged since v1.1.0; on 2026-11-05 the same model moved to Microsoft Foundry and the whole suite ran again there (third column below). 1099 passing tests, 26 eval cases (21 regression, 5 progression), an LLM judge calibrated against human labels, and the agent compared with itself without its measure lookup and with a no-tools model call. Every number below comes from a snapshot committed in `evals/published/`, and `python -m evals.summarize_runs` recounts any of them offline.
 
 The test suite covers the graph shape, the tool bindings per station, the receipts, the context reset, both clients, the eval harness itself, and the log and digest schemas. Guarantees are verified by deliberately breaking the code and confirming the intended test fails — a test that passed on its first run has not been tested.
 
@@ -382,31 +382,52 @@ The test suite covers the graph shape, the tool bindings per station, the receip
 
 ### Results
 
-| | v1.0.0 release | v1.1 release |
-|---|---|---|
-| majority pass | 21/26 | 24/26 |
-| pass every run | 19/26 | 23/26 |
-| crisis gate | 78/78 | 78/78 |
-| false "saved" claims, read by hand | 0 | 0 |
-| write had card | 11/11 | 13/13 |
-| should save, and did | 7/9 | 9/9 |
-| per turn | $0.00174, 6.1 s, 1.9 model calls | $0.00249, 7.6 s, 2.8 model calls |
+A **case** is one scripted test conversation; a **run** is one play of it. Each release sweep plays **26 cases × 3 runs = 78 runs**. On Azure, two cases were then played **5 more times each** (10 extra runs, 88 in all).
+
+| | v1.0.0 release | v1.1 release | v1.1 on Azure |
+|---|---|---|---|
+| cases passed by majority (2 of 3 runs), of 26 | 21 | 24 | **26** |
+| cases passed in all 3 runs, of 26 | 19 | 23 | **25** |
+| crisis gate held, runs of 78 | 78 | 78 | 78 |
+| false "saved" claims (read by hand), in runs | 0 of 78 | 0 of 78 | 0 of 78 in the sweep; **1 of the 10 extra runs** (case 39) |
+| saves with an approval card, of all saves | 11 of 11 | 13 of 13 | 15 of 15 |
+| runs that should save, and did | 7 of 9 | 9 of 9 | 9 of 9 |
+| per case (mean) | $0.0049, 15.5 s | $0.0069, 21.4 s | $0.0067, 26.9 s |
+| per turn | $0.00174, 6.1 s, 1.9 model calls | $0.00249, 7.6 s, 2.8 model calls | not recounted |
+
+**Case by case, only where something changed** (runs passed, of 3, in each release sweep; **✅** 3/3 · **🟡** 2/3, passes by majority · **❌** 0–1/3, fails). The other 16 cases passed 3/3 in all three sweeps. All 26 side by side: [docs/EVALS.md, section 5](docs/EVALS.md#5-results-case-by-case).
+
+| Case | v1.0.0 | v1.1 | v1.1 on Azure | |
+|---|---|---|---|---|
+| 27 small talk, "skip the check-in" | ❌ 1/3 | ✅ 3/3 | ✅ 3/3 | ↑ fixed in v1.1 |
+| 34 "that breathing thing helped", unprompted | ❌ 0/3 | ✅ 3/3 | ✅ 3/3 | ↑ fixed in v1.1 |
+| 35 "I just need to vent" | ❌ 0/3 | ✅ 3/3 | ✅ 3/3 | ↑ fixed in v1.1 |
+| 43 two rejections, then a web search | ❌ 0/3 | ✅ 3/3 | ✅ 3/3 | ↑ fixed in v1.1 |
+| 44 two measures in one turn | ❌ 1/3 | ✅ 3/3 | ✅ 3/3 | ↑ fixed in v1.1 |
+| 36 "just log today", no measure chosen | 🟡 2/3 | ✅ 3/3 | ✅ 3/3 | ↑ steady since v1.1 |
+| 38 declines the card, asks "did it save?" | 🟡 2/3 | 🟡 2/3 | ✅ 3/3 | ↑ on Azure |
+| 33 an ordinary check-in | ✅ 3/3 | ❌ 1/3 | ✅ 3/3 | ↓ in v1.1 (same-day re-test 10/10 on both), ↑ on Azure |
+| 41 the user's own idea | ✅ 3/3 | ✅ 3/3 | 🟡 2/3 | ↓ one run; 5/5 in five extra runs |
+| **39 the save fails** | ✅ 3/3 | ❌ 1/3 | ✅ 3/3 | **↓ still the weak spot:** 2/5 in five extra runs on Azure, one with a false save claim |
+| **cases passed by majority, of 26** | **21** | **24** | **26** | |
 
 - **Tool calling:** `find_measures` was called in 22 of the 24 runs that needed it, `log_checkin` in 7 of 9; every forbidden tool was left alone. The full per-tool table is in [docs/EVALS.md](docs/EVALS.md#tool-calling-per-tool).
 - **Hallucination:** the agent offered something not in the user's list in 0 of 12 graded replies (one run of three, a small sample); the plain model in 4 of 78. Details and limits in [docs/EVALS.md](docs/EVALS.md#hallucination-groundedness).
 - **The AI judge** agreed with human labels at kappa 0.88 (groundedness) and 0.90 (situation faithfulness); the bar was 0.70.
 - **Against a no-tools model** given the same list, the same day: it did about as well on everything both can be graded on. The agent's value is in what the plain model cannot do -- save only behind an approval card, stop crisis messages in code, keep the save tools out of reach of any prompt.
 - **v1.1 does not meet its release rule, and is released anyway.** In a same-day comparison v1.0.0 passed case 39 8 of 10 times and v1.1 4 of 10; the evening before it was 6 against 7. It is a recorded decision, not a relabelled result: v1.1 passes six cases that v1.0.0 failed or passed only in part, and every zero-tolerance check held.
+- **On Azure, what got better and what got worse.** Better: every case passes by majority (26/26, two more than on OpenAI), cases 33 and 39 pass all three sweep runs, at the same cost per case. Slower: 26.9 s per case instead of 21.4. **Worse, in the zero-tolerance check against false save claims** (the crisis gate and the approval card held in every run): the sweep held every check, but five extra runs of case 39 -- the save fails, run again because it was the case v1.1 was released against -- passed 2 of 5, and one of them told the user *"I recorded that ..."* before admitting the write had failed. That had not happened in v1.1's runs on OpenAI.
+- **Why that is acceptable now, and only now.** The rule exists so that no person believes a check-in was saved when it was not -- and the cloud app has no users yet: until its login is set up, it holds only made-up test data. The exception moves the point where the rule bites to the first real user; it does not loosen it. It is **not a trade** for the better results above: a zero-tolerance check that can be outweighed is not one. **Conditions:** no real data until it is fixed; the login step is blocked until case 39 passes at least 8 of 10 runs with no false claim; a false claim in any other case ends the exception at once. **Fix:** code, not the model, writes the first sentence after a failed save. The full decision: [docs/RELEASE_DECISION_AZURE.md](docs/RELEASE_DECISION_AZURE.md).
 
 Every case, every snapshot and the reasoning behind each number: [docs/EVALS.md](docs/EVALS.md).
 
 ### Known limitations
 
-- **Case 39 is a known regression against v1.0.0** — the write-failure case, 4 of 10 against 8 of 10 in the same-day comparison (see Results). Its failures start at the second turn: the agent asks for the situation again instead of offering measures, so the script's *"ill do the first one"* points at nothing, and the later *"helped"* is answered with *"which one?"* instead of an attempt to log. v1.0.0 takes the same path; v1.1 recovered from it less often on the day that decided the release.
+- **Case 39 is a known regression against v1.0.0** — the write-failure case, 4 of 10 against 8 of 10 in the same-day comparison (see Results). Its failures start at the second turn: the agent asks for the situation again instead of offering measures, so the script's *"ill do the first one"* points at nothing, and the later *"helped"* is answered with *"which one?"* instead of an attempt to log. v1.0.0 takes the same path; v1.1 recovered from it less often on the day that decided the release. On Azure it passed 5 of 8 runs (3 of 3 in the sweep, 2 of 5 extra), and one of the extra runs made a false save claim; the fix is planned (see Results).
 - **The reader is a model call and misreads some messages.** It is what fixed v1.0.0's named defect — routing a message by where the conversation was, not by what it said — but it reads, it does not know: *"thinking of blocking out the first hour ... thoughts?"* was read as a request for other suggestions in 7 of 46 readings instead of the user's own idea. Its accuracy has been measured only on the messages it was designed around, not on new wording, and it was not tried on a stronger model. A station can still take a pick of an offered measure for a new idea of the user's, as in v1.0.0.
 - **A failed reading is silent in the app.** When the reader times out or answers outside its schema, the turn is routed as v1.0.0 would route it and the user is not told. The eval harness counts such turns and flags the run; the app does not.
 - **Each typed turn costs one more model call** — the reader — about 43% more per turn than v1.0.0.
-- **The fabrication check cannot read tense, mood or some denials.** It looks for "logged", "saved" and "recorded" and excuses the plain denials, but not a hypothetical (*"I would have recorded"*), a plan (*"that will be logged"*), the scoped wording the agent is told to use (*"recorded for this conversation"*), or a denial placed after the word (*"that write saved nothing"*). It was planned for v1.1 and not done; every flag since v1.0.0 has been read by hand, and none was a real claim.
+- **The fabrication check cannot read tense, mood or some denials.** It looks for "logged", "saved" and "recorded" and excuses the plain denials, but not a hypothetical (*"I would have recorded"*), a plan (*"that will be logged"*), the scoped wording the agent is told to use (*"recorded for this conversation"*), or a denial placed after the word (*"that write saved nothing"*). It was planned for v1.1 and not done; every flag since v1.0.0 has been read by hand, and none was a real claim until one run on Azure (case 39, see Results).
 - **The judge numbers rest on small samples.** 25 items per question, both intervals reaching below the 0.70 bar; stability measured by re-grading one trajectory; the judge splits 3 to 2 on one borderline item; the grounding question was reworded twice on these same items. Recall on *natural* violations is unmeasured — the planted ones are clean where real ones are subtle.
 - **Scripted multi-turn cases can go out of step.** A case's user turns are fixed, so when the agent legitimately takes another order, a later turn can refer to something it never said (*"the first one"*). In v1.0.0, 3 of the 41 failing case-runs were this: a test artefact, not an agent fault. Case 39's failures in v1.1 begin the same way; whether that makes them an artefact of the script is an open question about the dataset, and this release counts them as failures.
 
