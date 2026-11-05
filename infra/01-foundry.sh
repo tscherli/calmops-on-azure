@@ -20,7 +20,10 @@ DEPLOYMENT="gpt-5-mini"        # the name the code calls
 # in this subscription (checked 2026-11-02), so we start with GlobalStandard.
 # Switching later keeps the same deployment name, so the code does not change.
 DEPLOYMENT_SKU="GlobalStandard"
-CAPACITY=50                    # in 1000 tokens per minute -> 50k TPM
+# In 1000 tokens per minute (TPM). A speed limit, not a price: GlobalStandard
+# bills per token used. 50 was too low for the eval sweep (4 conversations at
+# once): 45 of 78 runs failed with 429 on 2026-11-05. The quota allows 500.
+CAPACITY=250
 
 echo "1/4 Foundry resource"
 az cognitiveservices account create \

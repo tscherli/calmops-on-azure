@@ -25,7 +25,7 @@ os.environ.setdefault("OPENAI_API_KEY", "sk-test-not-a-real-key")
 # the suite at Azure and make it fetch Entra tokens.
 os.environ["AZURE_OPENAI_ENDPOINT"] = ""
 # The tests assume the default (search on) and switch it off themselves where
-# they need to; the Azure `.env` turns it off for the app.
+# they need to, whatever a local `.env` says.
 os.environ["OPENAI_ENABLE_WEB_SEARCH"] = "true"
 
 # A second isolation the suite needs for the same reason as the tracing

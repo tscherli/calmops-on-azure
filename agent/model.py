@@ -54,8 +54,9 @@ changes. There is no key: each request carries an Entra ID token for whoever
 runs the app (`az login` locally, the managed identity in the cloud). The
 model name is then the *deployment* name; `infra/01-foundry.sh` names the
 deployment after its model, so the defaults below and the prices in
-`observability/tracing.py` still apply. Web search stays off on Azure
-(`OPENAI_ENABLE_WEB_SEARCH=false`) until it is tested there.
+`observability/tracing.py` still apply. The built-in web search works there
+unchanged: on 2026-11-05 a Foundry gpt-5-mini deployment ran
+`{"type": "web_search"}` and returned a `web_search_call` and a sourced answer.
 """
 from __future__ import annotations
 
