@@ -119,11 +119,9 @@ def _fallback_opener(summary: dict) -> str:
 
 
 def _default_model():
-    from langchain_openai import ChatOpenAI
+    from agent.model import DEFAULT_MODEL, build_chat_model
 
-    from agent.model import DEFAULT_MODEL
-
-    return ChatOpenAI(model=DEFAULT_MODEL)
+    return build_chat_model(DEFAULT_MODEL)
 
 
 def open_window(

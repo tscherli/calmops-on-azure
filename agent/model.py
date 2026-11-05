@@ -46,9 +46,20 @@ call sites:
   is sent through `supports_reasoning_effort` rather than unconditionally.
   `minimal` is refused together with web search (400), which is why the default
   here is `low` rather than `minimal`.
+
+**On Azure.** With `AZURE_OPENAI_ENDPOINT` set, the same OpenAI models are
+called on that Microsoft Foundry endpoint instead of api.openai.com, through
+its v1 API -- still `ChatOpenAI`, still the Responses API, so nothing above
+changes. There is no key: each request carries an Entra ID token for whoever
+runs the app (`az login` locally, the managed identity in the cloud). The
+model name is then the *deployment* name; `infra/01-foundry.sh` names the
+deployment after its model, so the defaults below and the prices in
+`observability/tracing.py` still apply. Web search stays off on Azure
+(`OPENAI_ENABLE_WEB_SEARCH=false`) until it is tested there.
 """
 from __future__ import annotations
 
+import functools
 import os
 
 from langchain_core.language_models import BaseChatModel
@@ -85,6 +96,26 @@ MAX_RETRIES = 2
 # e.g. gpt-4o-mini fails the call.
 REASONING_MODEL_PREFIXES = ("gpt-5", "o1", "o3", "o4")
 
+AZURE_TOKEN_SCOPE = "https://cognitiveservices.azure.com/.default"
+
+
+def azure_base_url() -> str | None:
+    """The Foundry v1 API root when the app runs on Azure, else None."""
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip()
+    if not endpoint:
+        return None
+    return endpoint.rstrip("/") + "/openai/v1/"
+
+
+@functools.cache
+def _azure_token_provider():
+    # One credential for every model: DefaultAzureCredential walks a chain of
+    # login methods on first use, and the provider caches and refreshes the
+    # token, so building it per model would only repeat that work.
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    return get_bearer_token_provider(DefaultAzureCredential(), AZURE_TOKEN_SCOPE)
+
 
 def supports_reasoning_effort(model_name: str) -> bool:
     return model_name.strip().lower().startswith(REASONING_MODEL_PREFIXES)
@@ -107,6 +138,10 @@ def build_chat_model(model_name: str, *, reasoning_effort: str | None = None) ->
     }
     if effort and supports_reasoning_effort(model_name):
         kwargs["reasoning_effort"] = effort
+    base_url = azure_base_url()
+    if base_url:
+        kwargs["base_url"] = base_url
+        kwargs["api_key"] = _azure_token_provider()
     return ChatOpenAI(**kwargs)
 
 

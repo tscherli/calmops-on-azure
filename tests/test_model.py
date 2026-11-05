@@ -49,6 +49,34 @@ def test_effort_can_be_overridden_per_node():
     assert build_chat_model("gpt-5-mini", reasoning_effort="medium").reasoning_effort == "medium"
 
 
+# -- Azure ---------------------------------------------------------------------
+
+
+def test_without_an_azure_endpoint_the_model_calls_openai():
+    assert build_chat_model("gpt-5-mini").openai_api_base is None
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    ["https://foundry-test.cognitiveservices.azure.com/", "https://foundry-test.cognitiveservices.azure.com"],
+)
+def test_an_azure_endpoint_sends_every_call_to_its_v1_api(monkeypatch, endpoint):
+    import agent.model
+
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", endpoint)
+    monkeypatch.setattr(agent.model, "_azure_token_provider", lambda: lambda: "entra-token")
+
+    model = build_chat_model("gpt-5-mini")
+
+    assert model.openai_api_base == "https://foundry-test.cognitiveservices.azure.com/openai/v1/"
+    assert str(model.root_client.base_url) == "https://foundry-test.cognitiveservices.azure.com/openai/v1/"
+    # The deployment is called by the model's name, and the project-wide
+    # settings hold on Azure too.
+    assert model_name_of(model) == "gpt-5-mini"
+    assert model.use_responses_api is True
+    assert model.reasoning_effort == "low"
+
+
 # -- a call that never answers ------------------------------------------------
 
 
