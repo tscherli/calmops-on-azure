@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CalmOps</title>
+<style>
+  :root {
+    --window: #eef3f1; --panel: #ffffff; --button: #dcebe5; --accent: #2f7d6d;
+    --link: #1a5fb4; --card: #fff6e0; --you: #3b6ea5; --app: #a35a2a;
+    --text: #1f2a2c; --muted: #5f6f73; --error: #b22222; --line: #d5e0dc;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--window); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  [hidden] { display: none !important; }
+  main { display: flex; flex-direction: column; gap: 10px; height: 100dvh; max-width: 760px; margin: 0 auto; padding: 16px; }
+  h1 { margin: 0; font-size: 20px; color: var(--accent); }
+  button, input { font: inherit; }
+  button { border: 0; border-radius: 6px; padding: 6px 12px; background: var(--button); color: var(--text); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); color: #fff; }
+  input[type=text] { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--text); }
+  a { color: var(--link); }
+
+  #consent { overflow-y: auto; background: var(--panel); border-radius: 8px; padding: 20px; }
+  #consent p { white-space: pre-wrap; margin: 0 0 16px; }
+
+  #history { flex: 1; min-height: 0; overflow-y: auto; background: var(--panel); border-radius: 8px; padding: 14px; }
+  .message { margin: 0 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .sender { font-weight: 600; }
+  .sender.You { color: var(--you); }
+  .sender.Agent { color: var(--accent); }
+  .sender.App { color: var(--app); }
+  /* Machine output, not speech: the one thing here the agent cannot write. */
+  .receipt { margin: 0 0 6px; font: 12px/1.4 ui-monospace, Consolas, monospace; color: #6b7779; overflow-wrap: anywhere; }
+  .receipt.failed { color: var(--error); }
+  #working { color: var(--muted); font-style: italic; }
+
+  #card { background: var(--card); border: 1px solid #ecd9a8; border-radius: 8px; padding: 12px; }
+  #card p { margin: 0 0 8px; overflow-wrap: anywhere; }
+  #card input { margin-bottom: 8px; }
+
+  .panel { background: transparent; }
+  .panel h2 { margin: 0; font-size: 15px; color: var(--accent); }
+  .hint { margin: 0 0 4px; font-size: 14px; color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+  .row .label { width: 58px; color: var(--muted); font-size: 14px; }
+
+  form { display: flex; gap: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>CalmOps</h1>
+
+  <section id="consent" hidden>
+    <p id="consent-text"></p>
+    <button id="consent-button" class="primary" type="button">I understand</button>
+  </section>
+
+  <div id="history" role="log" aria-live="polite" hidden></div>
+
+  <section id="card" hidden>
+    <p id="card-text"></p>
+    <input id="card-input" type="text" aria-label="Edit what will be written">
+    <div class="row">
+      <button id="approve" type="button">Approve</button>
+      <button id="edit" type="button">Save my edit</button>
+      <button id="reject" type="button">Reject</button>
+    </div>
+  </section>
+
+  <section id="choices" class="panel" hidden>
+    <h2>Quick check-in</h2>
+    <p class="hint">One click each, no typing: how is your energy, and what do you need right now?</p>
+    <div class="row" id="energy-row"><span class="label">energy:</span></div>
+    <div class="row" id="goal-row"><span class="label">goal:</span></div>
+  </section>
+
+  <section id="rating" class="row" hidden>
+    <span id="rating-label"></span>
+  </section>
+
+  <form id="form" hidden>
+    <input id="message" type="text" autocomplete="off" aria-label="Your message" placeholder="How are you doing?">
+    <button id="send" class="primary" type="submit">Send</button>
+  </form>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const chatLog = $("history");
+
+  let controls = { card: [], show_choices: false, rate_measure: null };
+  let queue = [];        // the card's questions still to answer
+  let answers = [];      // the answers given so far
+  let busy = false;
+
+  // The same links as the window's split_links(): a Markdown link shows its
+  // title, a bare address shows itself, and only web addresses become links.
+  const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>()\[\]]+)/g;
+
+  // Text from the model only ever reaches the page as text nodes, so nothing
+  // in a reply, or in a web page it quotes, can run as code here.
+  function fillWithLinks(element, text) {
+    let position = 0;
+    for (const match of text.matchAll(LINK)) {
+      let shown, url, end;
+      if (match[3]) {
+        url = match[3].replace(/[.,;:!?'"]+$/, "");
+        shown = url;
+        end = match.index + url.length;
+      } else {
+        shown = match[1];
+        url = match[2];
+        end = match.index + match[0].length;
+      }
+      element.append(text.slice(position, match.index));
+      const link = document.createElement("a");
+      link.href = url;
+      link.textContent = shown;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      element.append(link);
+      position = end;
+    }
+    element.append(text.slice(position));
+  }
+
+  function scrollDown() {
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function addMessage(sender, text) {
+    const message = document.createElement("p");
+    message.className = "message";
+    const name = document.createElement("span");
+    name.className = "sender " + sender;
+    name.textContent = sender + ": ";
+    message.append(name);
+    fillWithLinks(message, text);
+    chatLog.append(message);
+    scrollDown();
+  }
+
+  function addReceipt(text, failed) {
+    const receipt = document.createElement("p");
+    receipt.className = failed ? "receipt failed" : "receipt";
+    receipt.textContent = text;
+    chatLog.append(receipt);
+    scrollDown();
+  }
+
+  function showItems(items) {
+    for (const item of items || []) {
+      if (item.kind === "receipt") addReceipt(item.text, item.failed);
+      else if (item.kind === "reply") addMessage("Agent", item.text);
+      else addMessage("App", item.text);
+    }
+  }
+
+  function refresh() {
+    const cardOpen = queue.length > 0;
+    $("card").hidden = !cardOpen;
+    if (cardOpen) {
+      const request = queue[0];
+      $("card-text").textContent = "Approval needed: " + request.description;
+      const editable = request.editable_text !== null;
+      $("card-input").hidden = !editable;
+      $("card-input").value = editable ? request.editable_text : "";
+      $("edit").disabled = busy || !editable;
+    }
+    $("approve").disabled = busy;
+    $("reject").disabled = busy;
+    $("card-input").disabled = busy;
+
+    $("choices").hidden = !controls.show_choices;
+    $("rating").hidden = !controls.rate_measure;
+    if (controls.rate_measure) {
+      $("rating-label").textContent = 'Was "' + controls.rate_measure + '" helpful?';
+    }
+
+    // Input stays locked while the card is open; only the card works.
+    const locked = busy || cardOpen;
+    $("message").disabled = locked;
+    $("send").disabled = locked;
+    document.querySelectorAll("#choices button, #rating button").forEach((button) => {
+      button.disabled = locked;
+    });
+  }
+
+  function apply(view) {
+    showItems(view.items);
+    controls = view;
+    queue = (view.card || []).slice();
+    answers = [];
+    refresh();
+    if (!queue.length && !busy) $("message").focus();
+  }
+
+  async function post(path, body) {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof data.detail === "string" ? data.detail : "Something went wrong. Please try again.");
+    }
+    return data;
+  }
+
+  async function send(path, body) {
+    busy = true;
+    refresh();
+    const working = document.createElement("p");
+    working.id = "working";
+    working.className = "message";
+    working.textContent = "Working on it…";
+    chatLog.append(working);
+    scrollDown();
+    let view = null;
+    let problem = null;
+    try {
+      view = await post(path, body);
+    } catch (error) {
+      problem = error.message;
+    }
+    working.remove();
+    busy = false;
+    if (view) {
+      apply(view);
+      return;
+    }
+    addMessage("App", problem);
+    // The server knows what is still open: a card whose answer got lost in
+    // the network has to come back, or the chat would stay refused.
+    try {
+      apply(await (await fetch("/state")).json());
+    } catch (error) {
+      refresh();
+    }
+  }
+
+  function decide(type) {
+    const request = queue.shift();
+    const text = $("card-input").value.trim();
+    answers.push({ id: request.id, type: type, text: type === "edit" ? text : "" });
+    if (type === "edit" && text) addMessage("You", 'edited - "' + text + '"');
+    else if (type === "approve") addMessage("You", "approved - " + request.description);
+    else addMessage("You", "rejected - " + request.description);
+    if (queue.length) {
+      refresh();
+    } else {
+      send("/approve", { decisions: answers });
+    }
+  }
+
+  function addButton(row, label, onClick) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", onClick);
+    row.append(button);
+  }
+
+  function showChat() {
+    $("consent").hidden = true;
+    chatLog.hidden = false;
+    $("form").hidden = false;
+    refresh();
+    $("message").focus();
+  }
+
+  function setUp(state) {
+    state.energy_options.forEach((value) =>
+      addButton($("energy-row"), value, () => send("/choice", { field: "energy", value: value })));
+    state.goal_options.forEach((value) =>
+      addButton($("goal-row"), value, () => send("/choice", { field: "goal", value: value })));
+    state.ratings.forEach((rating) =>
+      addButton($("rating"), rating.label, () => send("/rate", { value: rating.value })));
+    $("message").maxLength = state.max_text;
+    $("card-input").maxLength = state.max_text;
+
+    controls = state;
+    queue = (state.card || []).slice();
+
+    if (state.consent_text) {
+      $("consent-text").textContent = state.consent_text;
+      $("consent").hidden = false;
+    } else {
+      showChat();
+    }
+  }
+
+  $("consent-button").addEventListener("click", async () => {
+    $("consent-button").disabled = true;
+    try {
+      await post("/consent");
+      showChat();
+    } catch (error) {
+      $("consent-button").disabled = false;
+      alert(error.message);
+    }
+  });
+
+  $("approve").addEventListener("click", () => decide("approve"));
+  $("edit").addEventListener("click", () => decide("edit"));
+  $("reject").addEventListener("click", () => decide("reject"));
+
+  $("form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = $("message").value.trim();
+    if (!text || busy) return;
+    $("message").value = "";
+    addMessage("You", text);
+    send("/chat", { message: text });
+  });
+
+  fetch("/state")
+    .then((response) => response.json())
+    .then(setUp)
+    .catch(() => {
+      chatLog.hidden = false;
+      addMessage("App", "The app could not start. Please reload the page.");
+    });
+</script>
+</body>
+</html>

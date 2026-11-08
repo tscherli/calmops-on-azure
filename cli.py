@@ -111,6 +111,10 @@ class Session:
         self.state: dict[str, Any] = {"messages": []}
         self.pending_ratings: list[str] = measures_awaiting_rating(log_path)
         self.last_measure_id: str = self.pending_ratings[0] if self.pending_ratings else ""
+        # What the turn is waiting for while the approval card is open, and
+        # what it needs to go on afterwards.
+        self.paused: dict | None = None
+        self._turn: tuple[list, dict, float] | None = None
 
     # -- what is currently possible -----------------------------------------
 
@@ -130,7 +134,19 @@ class Session:
     # -- a turn --------------------------------------------------------------
 
     def run_turn(self, text: str, **extra: Any) -> None:
-        """Crisis gate first, exactly as app.py does, then the graph."""
+        """A whole turn, with every approval card answered right here."""
+        self.start_turn(text, **extra)
+        while self.paused is not None:
+            self.resume_turn(self._decide(self.paused))
+
+    def start_turn(self, text: str, **extra: Any) -> None:
+        """Crisis gate first, exactly as app.py does, then the graph -- up to
+        the end of the turn or the first approval card (`self.paused`).
+
+        Start and resume are two calls because a web server cannot wait inside
+        a call for somebody to click: api.py answers the request here and
+        resumes when the click arrives as a request of its own.
+        """
         crisis = screen_for_crisis(text)
         if crisis.triggered:
             self.out(CRISIS_RESOURCES)
@@ -141,15 +157,24 @@ class Session:
         # A fresh thread per turn: the carried state goes in as today, and the
         # checkpointer only has to span a pause within this one turn.
         config = {"configurable": {"thread_id": uuid.uuid4().hex}}
+        self._turn = (messages_before, config, time.time())
+        self._advance(payload)
 
-        started = time.time()
+    def resume_turn(self, decisions: list[dict]) -> None:
+        """Go on after the approval card, with the user's decisions."""
+        self._advance(Command(resume={"decisions": decisions}))
+
+    def _advance(self, graph_input: Any) -> None:
+        """One stretch of the turn: to its end or to the next pause."""
+        messages_before, config, started = self._turn
         try:
-            final, paused = self._stream(payload, config)
-            while paused is not None:
-                decisions = self._decide(paused)
-                final, paused = self._stream(Command(resume={"decisions": decisions}), config)
+            final, self.paused = self._stream(graph_input, config)
         except Exception as exc:  # never let a traceback end the session
-            self.out(content_filter_reply(exc) or f"Something went wrong and I couldn't process that: {exc}")
+            self.paused = None
+            self.out(self._failure_text(exc))
+            return
+
+        if self.paused is not None:
             return
 
         if final is None:
@@ -157,6 +182,22 @@ class Session:
             return
 
         self._finish(final, messages_before, time.time() - started)
+
+    def _failure_text(self, exc: Exception) -> str:
+        return content_filter_reply(exc) or f"Something went wrong and I couldn't process that: {exc}"
+
+    # -- how a turn is shown (api.py shows the same things as JSON) ----------
+
+    def _show_receipt(self, event: dict) -> None:
+        self.out(format_tool_event(event))
+
+    def _show_reply(self, text: str, result: dict, latency: float) -> None:
+        self.out(f"\nAgent: {text}")
+        self.out(
+            f"  [station: {result.get('step') or '-'}"
+            f" | complete: {bool(result.get('complete'))}"
+            f" | {latency:.1f}s]"
+        )
 
     def _stream(self, graph_input: Any, config: dict) -> tuple[dict | None, dict | None]:
         """Run the graph up to the end of the turn or up to the next pause.
@@ -174,7 +215,7 @@ class Session:
                         paused = node_update[0].value
                         continue
                     for event in (node_update or {}).get("tool_events") or []:
-                        self.out(format_tool_event(event))
+                        self._show_receipt(event)
             elif mode == "values":
                 final = {k: v for k, v in chunk.items() if k != "__interrupt__"}
         return final, paused
@@ -213,21 +254,14 @@ class Session:
 
     def _finish(self, result: dict, messages_before: list, latency: float) -> None:
         if not any(e.get("tool") == "log_checkin" for e in result.get("tool_events") or []):
-            self.out(format_tool_event(
-                {"tool": "log_checkin", "exit_code": None, "detail": "not called this turn"}
-            ))
+            self._show_receipt({"tool": "log_checkin", "exit_code": None, "detail": "not called this turn"})
 
         messages = result["messages"]
         if self.recorder is not None:
             self.recorder.record_turn(
                 messages_before, messages, DEFAULT_MODEL, latency, side_calls=result.get("side_calls") or []
             )
-        self.out(f"\nAgent: {message_text(messages[-1])}")
-        self.out(
-            f"  [station: {result.get('step') or '-'}"
-            f" | complete: {bool(result.get('complete'))}"
-            f" | {latency:.1f}s]"
-        )
+        self._show_reply(message_text(messages[-1]), result, latency)
 
         pending = measures_awaiting_rating(self.log_path)
         if not pending and result.get("last_measure_id"):
@@ -315,16 +349,16 @@ class Session:
             measure_id=self.last_measure_id, helpfulness=value, path=self.log_path
         )
         if result["status"] == "ok":
-            self.out(format_tool_event(
+            self._show_receipt(
                 {"tool": "log_checkin", "exit_code": 0,
                  "detail": f"rating row {result['row_id'][:8]}"}
-            ))
+            )
             self._set_pending_ratings(measures_awaiting_rating(self.log_path))
         else:
-            self.out(format_tool_event(
+            self._show_receipt(
                 {"tool": "log_checkin", "exit_code": 1,
                  "detail": f"write failed: {result.get('error', 'unknown error')}"}
-            ))
+            )
 
 
 def main() -> None:
