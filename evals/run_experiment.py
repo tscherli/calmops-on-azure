@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -150,22 +150,22 @@ def _completion_and_cost(rows: list[dict]) -> list[str]:
 
     used = [r["usage"] for r in rows if r.get("usage")]
     if not used:
-        lines += ["- Cost, latency and model calls: not recorded for this run (hosted runs "
-                  "carry no per-case usage; run evals/run_local.py)", ""]
+        lines += [("- Cost, latency and model calls: not recorded for this run (hosted runs "
+                  "carry no per-case usage; run evals/run_local.py)"), ""]
         return lines
     calls = [u.get("model_calls", 0) for u in used]
     cost = [u.get("cost_usd", 0.0) for u in used]
     latency = [u.get("latency_seconds", 0.0) for u in used]
     passed = sum(1 for r in rows if case_passed(r["scores"]))
     lines += [
-        f"- Model calls per case: mean {sum(calls) / len(calls):.1f}, max {max(calls)} "
-        "(a case's user turns are fixed by its script; calls are what show looping or padding)",
-        f"- Cost per case: mean ${sum(cost) / len(cost):.4f}, total ${sum(cost):.4f} "
-        f"for {len(used)} cases",
-        f"- Cost per passing case: "
+        (f"- Model calls per case: mean {sum(calls) / len(calls):.1f}, max {max(calls)} "
+        "(a case's user turns are fixed by its script; calls are what show looping or padding)"),
+        (f"- Cost per case: mean ${sum(cost) / len(cost):.4f}, total ${sum(cost):.4f} "
+        f"for {len(used)} cases"),
+        "- Cost per passing case: "
         + (f"${sum(cost) / passed:.4f} (total cost / {passed} passing)" if passed else "n/a, none passed"),
-        f"- Latency per case: mean {sum(latency) / len(latency):.1f}s, max {max(latency):.1f}s "
-        "(agent turns only; the crisis gate and the graders are not timed)",
+        (f"- Latency per case: mean {sum(latency) / len(latency):.1f}s, max {max(latency):.1f}s "
+        "(agent turns only; the crisis gate and the graders are not timed)"),
         "- The judge's own calls (Gemini) are not in these figures.",
     ]
     # Runs from before the reader have no such field, and their report reads
@@ -196,7 +196,7 @@ def _build_report(rows: list[dict], *, experiment_url: str | None, experiment_na
     lines = [
         f"# Eval report: {experiment_name}",
         "",
-        f"Generated {datetime.now(timezone.utc).isoformat()}",
+        f"Generated {datetime.now(UTC).isoformat()}",
     ]
     if experiment_url:
         lines.append(f"LangSmith experiment: {experiment_url}")
@@ -280,7 +280,7 @@ def _build_report(rows: list[dict], *, experiment_url: str | None, experiment_na
 
 def _write_report(report: str) -> Path:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     path = RESULTS_DIR / f"eval-report-{timestamp}.md"
     path.write_text(report, encoding="utf-8")
     return path

@@ -186,7 +186,7 @@ def test_a_failed_eval_write_never_reaches_the_real_state_folder(monkeypatch):
     sweep. The conftest fixture guards tests; this guards real eval runs,
     which is why it checks for the eval's own temp prefix rather than for
     "somewhere temporary" (the test fixture's path is temporary too)."""
-    import tools.checkin_log as checkin_log
+    from tools import checkin_log
 
     monkeypatch.setattr("evals.target.build_agent", lambda **kwargs: _StubGraph())
     run_case({"turns": ["quiet morning"]})
@@ -487,7 +487,7 @@ def test_a_planted_measure_is_cleaned_like_one_the_app_wrote(tmp_path):
         measures_path,
     )
 
-    row = list(csv.DictReader(measures_path.open(encoding="utf-8", newline="")))[0]
+    row = next(iter(csv.DictReader(measures_path.open(encoding="utf-8", newline=""))))
     assert row["measure"] == "Rest for 5-15 minutes."
 
 

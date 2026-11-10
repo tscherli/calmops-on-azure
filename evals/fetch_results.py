@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -140,7 +140,7 @@ def build_report(rows: list[dict], experiment_name: str) -> str:
     lines = [
         f"# Eval results (fetched via API): {experiment_name}",
         "",
-        f"Fetched {datetime.now(timezone.utc).isoformat()} -- no UI access required.",
+        f"Fetched {datetime.now(UTC).isoformat()} -- no UI access required.",
         f"Cases: {len(rows)}",
         "",
         "## Zero-tolerance rubric items",
@@ -203,7 +203,7 @@ def build_report(rows: list[dict], experiment_name: str) -> str:
 
 def write_report(report: str, experiment_name: str) -> Path:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in experiment_name)
     path = RESULTS_DIR / f"fetched-{safe}-{stamp}.md"
     path.write_text(report, encoding="utf-8")

@@ -281,7 +281,7 @@ def test_a_failed_write_in_a_test_never_reaches_the_real_state_folder(tmp_path):
     in. The conftest fixture has to catch it, or the row lands in the user's
     state/pending_sheet_log.jsonl -- which is what two full test runs did on
     2026-09-27 before the fixture existed."""
-    import tools.checkin_log as checkin_log
+    from tools import checkin_log
 
     blocked = tmp_path / "afile"
     blocked.write_text("not a directory", encoding="utf-8")

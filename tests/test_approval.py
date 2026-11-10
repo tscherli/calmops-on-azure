@@ -193,10 +193,10 @@ def test_a_rejection_leaves_a_receipt_and_tells_the_model():
     counting = Counting()
     graph = graph_with(counting.tools, calls(("log_checkin", {"circumstances": "x"}, "w1")))
     result = turn(graph, reject)
-    event = [e for e in result["tool_events"] if e["tool"] == "log_checkin"][0]
+    event = next(e for e in result["tool_events"] if e["tool"] == "log_checkin")
     assert event["status"] == "rejected"
     assert event["exit_code"] is None
-    refusal = [m for m in result["messages"] if isinstance(m, ToolMessage) and m.tool_call_id == "w1"][0]
+    refusal = next(m for m in result["messages"] if isinstance(m, ToolMessage) and m.tool_call_id == "w1")
     assert refusal.content == REJECTED_TEXT
     assert refusal.status == "error"
 
@@ -208,7 +208,7 @@ def test_a_refused_write_still_names_the_call_it_refused():
     counting = Counting()
     graph = graph_with(counting.tools, calls(("log_checkin", {"circumstances": "x"}, "w1")))
     result = turn(graph, reject)
-    event = [e for e in result["tool_events"] if e["tool"] == "log_checkin"][0]
+    event = next(e for e in result["tool_events"] if e["tool"] == "log_checkin")
     assert event["call_id"] == "w1"
 
 
@@ -253,7 +253,7 @@ def test_an_edited_value_still_goes_through_the_tools_own_checks(measures_file):
     before = measures_file.read_bytes()
     graph = real_add_measure_graph(measures_file, PROPOSED)
     result = turn(graph, lambda r: {"type": "edit", "args": dict(PROPOSED, measure_id="gua sha_tools")})
-    event = [e for e in result["tool_events"] if e["tool"] == "add_measure"][0]
+    event = next(e for e in result["tool_events"] if e["tool"] == "add_measure")
     assert event["exit_code"] == 1
     assert measures_file.read_bytes() == before
 

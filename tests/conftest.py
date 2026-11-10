@@ -155,7 +155,7 @@ def tk_root():
         for after_id in root.tk.eval("after info").split():
             try:
                 root.after_cancel(after_id)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 - best-effort Tk cleanup
                 pass
         root.update()
     except tk.TclError:

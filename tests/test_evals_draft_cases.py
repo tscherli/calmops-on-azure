@@ -15,7 +15,13 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 import evals.draft_cases as draft_module
-from evals.draft_cases import ASSERTION_KEYS, _format_transcript, _reject_assertions, draft, load_brief
+from evals.draft_cases import (
+    ASSERTION_KEYS,
+    _format_transcript,
+    _reject_assertions,
+    draft,
+    load_brief,
+)
 
 BRIEF = {
     "persona": "Wired after four hours of back-to-back calls, nothing eaten since breakfast.",

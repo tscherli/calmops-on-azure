@@ -164,7 +164,7 @@ def _reject_assertions(text: str) -> str:
     person would not know the prompt had stopped working.
     """
     stripped = text.strip()
-    if stripped.startswith("{") or stripped.startswith("["):
+    if stripped.startswith(("{", "[")):
         raise SystemExit(
             "The drafter returned structured data instead of a message. It is asked for "
             "one line of what the person types; the case around it is written by hand."
@@ -186,7 +186,7 @@ _REFERENCE = re.compile(
     r"\b(?:try|do|take|use|pick|want|lets|let's)\s+(?:the\s+)?([a-z][a-z ]{2,30}?)"
     r"(?:\s+(?:thing|one|please)\b|[.,!?]|$)"
     r"|\bthe\s+([a-z][a-z ]{2,30}?)\s+(?:thing|one)\b",
-    re.I,
+    re.IGNORECASE,
 )
 _FILLER = frozenset(
     {

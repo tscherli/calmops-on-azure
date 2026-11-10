@@ -49,9 +49,12 @@ def sandbox_imports(source: str) -> list[str]:
             name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
             if name in {"import_module", "__import__"} and node.args:
                 arg = node.args[0]
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    if arg.value.split(".")[0] == "sandbox":
-                        found.append(arg.value)
+                if (
+                    isinstance(arg, ast.Constant)
+                    and isinstance(arg.value, str)
+                    and arg.value.split(".")[0] == "sandbox"
+                ):
+                    found.append(arg.value)
     return found
 
 

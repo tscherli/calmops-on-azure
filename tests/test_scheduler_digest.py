@@ -197,7 +197,7 @@ def test_the_digest_reads_the_folder_it_is_given(monkeypatch, tmp_path):
 
 def test_the_scheduler_opens_its_windows_on_the_data_dir(monkeypatch, tmp_path):
     import scheduler
-    import tools.checkin_log as checkin_log
+    from tools import checkin_log
 
     monkeypatch.setattr(checkin_log, "PENDING_LOG_PATH", checkin_log.PENDING_LOG_PATH)
     opened = {}

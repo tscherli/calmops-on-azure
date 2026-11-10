@@ -11,7 +11,6 @@ from agent.model import (
     supports_reasoning_effort,
 )
 
-
 # -- reasoning effort --------------------------------------------------------
 
 

@@ -1,8 +1,7 @@
 """agent/common.py -- helpers that outlive any single graph design."""
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-import agent.common as common
-import agent.graph as graph
+from agent import common, graph
 from agent.common import (
     compact_spent_tool_messages,
     drop_unanswered_tool_calls,

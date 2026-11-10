@@ -38,12 +38,18 @@ import argparse
 import json
 import re
 import textwrap
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Callable, Iterable
 
 from evals.calibrate_judge import CONVERSATION_FIELD, FINAL_REPLY_FIELD, LABEL_PATH
+from evals.judge import (
+    JUDGE_KEYS,
+    OFFERED_KEY,
+    OFFERED_PROMPT,
+    SITUATION_KEY,
+    SITUATION_PROMPT,
+)
 from tools.measures import _PUNCTUATION
-from evals.judge import JUDGE_KEYS, OFFERED_KEY, OFFERED_PROMPT, SITUATION_KEY, SITUATION_PROMPT
 
 WIDTH = 96
 
@@ -66,7 +72,7 @@ def question_text(key: str) -> str:
     nothing, and the second copy of a rubric is wrong the first time anyone
     edits the first.
     """
-    match = re.search(r"<Question>(.*?)</Question>", PROMPTS[key], re.S)
+    match = re.search(r"<Question>(.*?)</Question>", PROMPTS[key], re.DOTALL)
     if not match:  # pragma: no cover - the prompts are tested for this
         raise SystemExit(f"{key}: no <Question> block in the judge's prompt")
     return textwrap.dedent(match.group(1)).strip()

@@ -42,7 +42,7 @@ from __future__ import annotations
 import csv
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -322,7 +322,7 @@ def log_entry(
         )
     is_rating = bool(helpfulness)
     append_row(LOG_FILE, LOG_COLUMNS, {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "energy": "" if is_rating else energy,
         "circumstances": "" if is_rating else circumstances,
         "measure_id": measure_id,

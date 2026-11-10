@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # The project root, one level up: this file lives in devtools/, and the
 # agent it renders is imported from the root.
@@ -37,7 +37,7 @@ NOTES_PATH = PROJECT / "notes" / "graph-visual.md"
 class StubChatModel(BaseChatModel):
     """Stands in for ChatOpenAI so rendering needs no key and calls nothing."""
 
-    def bind_tools(self, tools: Any, *, tool_choice: Optional[str] = None, **kwargs: Any):
+    def bind_tools(self, tools: Any, *, tool_choice: str | None = None, **kwargs: Any):
         return self
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:

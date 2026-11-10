@@ -321,7 +321,7 @@ def test_a_user_who_does_not_know_the_goal_gets_measures_from_the_list(measures_
     model = StubChatModel(responses=[lookup, AIMessage(content="two from your list")])
     graph = build_agent(model=model, measures_path=measures_file)
     result = graph.invoke({"messages": [user("I don't know what would help")], "energy": "exhausted"})
-    event = [e for e in result["tool_events"] if e["tool"] == "find_measures"][0]
+    event = next(e for e in result["tool_events"] if e["tool"] == "find_measures")
     assert event["exit_code"] == 0 and "(any goal)" in event["detail"]
     assert result["offered"] and result["step"] == "ask"
     assert not result.get("__interrupt__")
@@ -475,7 +475,7 @@ def test_after_a_click_the_lookup_really_runs_in_the_users_list(measures_file):
     graph = build_agent(model=model, measures_path=measures_file)
     result = graph.invoke({**CLICKED_AFTER_THE_STEP_BACK, "choices_clicked": True})
     assert result["step"] == "suggest", "follow_up could run a lookup too, but only suggest forces one"
-    event = [e for e in result["tool_events"] if e["tool"] == "find_measures"][0]
+    event = next(e for e in result["tool_events"] if e["tool"] == "find_measures")
     assert event["exit_code"] == 0
     assert len(result["offered"]) > 1 and result["offered"][0] == "breathe"
 

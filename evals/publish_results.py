@@ -51,7 +51,7 @@ import json
 import re
 import subprocess
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from evals.calibrate_judge import LABEL_PATH, labelled_corpus, load_trajectories, score
@@ -190,7 +190,7 @@ def publish(
     if corpus is None or not corpus.exists():
         raise SystemExit("No labelled corpus: the label file's source does not point at a local run.")
 
-    created = datetime.now(timezone.utc)
+    created = datetime.now(UTC)
     folder = published_dir / f"{created:%Y%m%d-%H%M%S}-{name}"
 
     labels = json.loads(label_path.read_text(encoding="utf-8"))
@@ -297,7 +297,7 @@ def publish_runs(
         raise SystemExit("The working tree has uncommitted changes. Commit first: the README "
                          "records the commit, and it has to be the code that made this.")
     commit = commit or git_commit()
-    created = datetime.now(timezone.utc)
+    created = datetime.now(UTC)
     folder = published_dir / f"{created:%Y%m%d-%H%M%S}-{name}"
 
     out: dict[str, str] = {path.name: sanitise_result_file(path) for path in files}

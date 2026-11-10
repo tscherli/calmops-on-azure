@@ -3,10 +3,9 @@ from pathlib import Path
 
 import pytest
 
-import observability.tracing as tracing
-import tools.checkin_log as checkin_log
-import tools.measures as measures
 from agent.data_paths import DATA_DIR_ENV, DEFAULT_CONSENT_PATH, data_paths, prepare
+from observability import tracing
+from tools import checkin_log, measures
 
 
 @pytest.fixture(autouse=True)

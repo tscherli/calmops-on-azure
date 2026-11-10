@@ -794,7 +794,7 @@ def test_consent_given_in_the_folder_skips_the_screen_there(tk_root, tmp_path):
 
 
 def test_main_opens_the_window_on_the_data_dir(tmp_path, monkeypatch):
-    import tools.checkin_log as checkin_log
+    from tools import checkin_log
 
     monkeypatch.setattr(checkin_log, "PENDING_LOG_PATH", checkin_log.PENDING_LOG_PATH)
     opened = {}

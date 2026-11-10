@@ -591,7 +591,7 @@ def test_the_agent_logs_where_rate_does(tmp_path, monkeypatch):
 
 def _run_main(monkeypatch, *argv):
     """cli.main() with these arguments, until the first prompt; the session it made."""
-    import tools.checkin_log as checkin_log
+    from tools import checkin_log
 
     monkeypatch.setattr(checkin_log, "PENDING_LOG_PATH", checkin_log.PENDING_LOG_PATH)
     made = {}

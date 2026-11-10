@@ -22,8 +22,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from dotenv import load_dotenv
 
@@ -77,7 +76,7 @@ def build_report(data: dict, experiments: list[str]) -> str:
     lines = [
         f"# Run-to-run stability across {n} runs of identical code",
         "",
-        f"Generated {datetime.now(timezone.utc).isoformat()}",
+        f"Generated {datetime.now(UTC).isoformat()}",
         "",
         "Runs compared:",
         *[f"- `{e}`" for e in experiments],
@@ -167,7 +166,7 @@ def main() -> None:
     data = collect(client, names, args.dataset)
     report = build_report(data, names)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     path = RESULTS_DIR / f"stability-{stamp}.md"
     path.write_text(report, encoding="utf-8")
     print(report)

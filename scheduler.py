@@ -74,7 +74,7 @@ def build_digest_opener(summary: dict, *, model=None) -> str:
         text = reply.content if isinstance(reply.content, str) else str(reply.content)
         if text.strip():
             return text.strip()
-    except Exception:
+    except Exception:  # noqa: BLE001, S110 - any model failure falls back to the plain opener
         pass
     return _fallback_opener(summary)
 

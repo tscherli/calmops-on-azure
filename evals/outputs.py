@@ -11,10 +11,10 @@ Nothing here judges anything. These functions only say what happened.
 """
 from __future__ import annotations
 
+import json
+
 from agent.graph import SITUATION_DECLINED
 from tools.measures import read_measures
-
-import json
 
 
 def lookup_results(outputs: dict) -> list[list[dict]]:

@@ -10,7 +10,12 @@ real smoke test) slip past testing originally.
 from langsmith.evaluation.evaluator import EvaluationResult
 
 from evals.judge import OFFERED_KEY, SITUATION_KEY
-from evals.run_experiment import _build_report, _extract_row, case_passed, expect_verdict
+from evals.run_experiment import (
+    _build_report,
+    _extract_row,
+    case_passed,
+    expect_verdict,
+)
 
 
 class _StubExample:

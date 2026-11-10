@@ -42,10 +42,10 @@ CHECK_IN = [
     ("msg", "You", "Back-to-back meetings all morning, and my head is buzzing. I'm wired, I just want to calm down."),
     ("tool", {"tool": "record_choices", "exit_code": 0, "detail": "energy wired, goal calm down now"}),
     ("tool", {"tool": "find_measures", "exit_code": 0, "detail": "3 measures"}),
-    ("msg", "Agent", "That sounds like a lot in one morning. Two from your own list that fit a wired, "
+    ("msg", "Agent", ("That sounds like a lot in one morning. Two from your own list that fit a wired, "
                      "calm-down-now moment: box breathing for four rounds (about two minutes), or a "
                      "short walk without your phone. If you'd like the why behind short breaks, here is "
-                     "[a short read on micro-breaks](https://example.org/micro-breaks). Which one feels doable?"),
+                     "[a short read on micro-breaks](https://example.org/micro-breaks). Which one feels doable?")),
 ]
 PICKED = [
     ("msg", "You", "the breathing one"),

@@ -463,7 +463,7 @@ def test_asking_for_an_experiment_takes_the_hosted_path(monkeypatch, tmp_path):
 
     monkeypatch.setattr(calib, "load_trajectories_from_langsmith", fake)
 
-    records, label = calib.resolve_source(tmp_path / "missing.jsonl", "", "ds")
+    _records, label = calib.resolve_source(tmp_path / "missing.jsonl", "", "ds")
     assert called["experiment"] is None
     assert label == "langsmith:x"
 

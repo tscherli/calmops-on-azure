@@ -52,7 +52,13 @@ from pathlib import Path
 from typing import Annotated, Any, Literal, TypedDict
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.tools import BaseTool, InjectedToolCallId, tool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
@@ -160,7 +166,7 @@ NOT_HELPFUL_PHRASES = (
 # shortcut costs little -- the model reads the message and can reject itself.
 NOT_HELPFUL_MAX_EXTRA_WORDS = 5
 CARRIES_MORE_WORDS = frozenset(
-    "but if since because to add log save".split()
+    ["but", "if", "since", "because", "to", "add", "log", "save"]
 )
 
 # How a measure that is waiting for a rating can be rated in words. A check-in
@@ -1498,14 +1504,14 @@ __all__ = [
     "DEFAULT_RECURSION_LIMIT",
     "NOT_HELPFUL_PHRASES",
     "REJECTED_TEXT",
+    "WRITE_TOOLS",
     "Reading",
     "State",
-    "WRITE_TOOLS",
     "action_request",
     "build_agent",
+    "discuss_idea",
     "effective_wants",
     "forced_tool",
-    "discuss_idea",
     "idea_decided",
     "idea_kept",
     "measure_known",

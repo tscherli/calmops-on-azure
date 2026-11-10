@@ -4,8 +4,8 @@ import csv
 import pytest
 
 from tools.measures import (
-    LOOKUP_ROW_LIMIT,
     GOALS,
+    LOOKUP_ROW_LIMIT,
     MEASURE_COLUMNS,
     MEASURES_PATH,
     fits_goal,
@@ -13,7 +13,6 @@ from tools.measures import (
     make_find_measures,
     make_search_measures,
     matching_measures,
-    measure_ids,
     read_measures,
     search_measures_by_words,
 )

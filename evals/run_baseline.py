@@ -45,7 +45,7 @@ from __future__ import annotations
 import argparse
 import json
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -59,7 +59,13 @@ from agent.model import DEFAULT_MODEL, resolve_model
 from evals.create_dataset import load_cases
 from evals.evaluators import fabrication_evaluator
 from evals.judge import OFFERED_KEY, SITUATION_KEY, _format_measures, judge_evaluator
-from evals.run_local import DEFAULT_WORKERS, TRAJECTORIES_DIR, _feedback_items, case_inputs, describe_error
+from evals.run_local import (
+    DEFAULT_WORKERS,
+    TRAJECTORIES_DIR,
+    _feedback_items,
+    case_inputs,
+    describe_error,
+)
 from evals.target import _isolated_measures_path, seed_measures, serialize_messages
 from tools.measures import read_measures
 
@@ -155,14 +161,14 @@ def evaluate_baseline_case(case: dict) -> dict:
     reference = {"category": case["category"]}
     try:
         outputs = run_baseline_case(case_inputs(case))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - one failed case must not stop the sweep
         return {"case_id": case["id"], "category": case["category"], "scores": {}, **describe_error(exc)}
     scores: dict = {}
     for evaluator in EVALUATORS:
         try:
             for item in _feedback_items(evaluator(outputs=outputs, reference_outputs=reference)):
                 scores[item["key"]] = item.get("score")
-        except Exception as exc:  # a broken evaluator must not lose the run
+        except Exception as exc:  # noqa: BLE001 - a broken evaluator must not lose the run
             scores[getattr(evaluator, "__name__", "evaluator")] = None
             print(f"  ! {case['id']}: {getattr(evaluator, '__name__', '?')} raised {exc}")
     return {"case_id": case["id"], "category": case["category"], "scores": scores, "outputs": outputs}
@@ -178,8 +184,8 @@ def build_baseline_report(rows_by_run: list[list[dict]], model_name: str) -> str
     lines = [
         "# No-tools baseline",
         "",
-        f"Generated {datetime.now(timezone.utc).isoformat()} -- model `{model_name}`, "
-        f"{len(rows_by_run)} run(s), {len(rows_by_run[0]) if rows_by_run else 0} cases each.",
+        (f"Generated {datetime.now(UTC).isoformat()} -- model `{model_name}`, "
+        f"{len(rows_by_run)} run(s), {len(rows_by_run[0]) if rows_by_run else 0} cases each."),
         "",
         "One model call per turn: no crisis gate, no approval card, no log, no lookup, no web",
         "search. The user's measure list is in its prompt, and it is told it cannot save anything.",
@@ -222,7 +228,7 @@ def build_baseline_report(rows_by_run: list[list[dict]], model_name: str) -> str
 
 def _stamp() -> str:
     """UTC, fixed width, most significant first -- sorts as text, like run_local's."""
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 
 
 def run_baseline(

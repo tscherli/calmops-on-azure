@@ -22,8 +22,8 @@ import argparse
 import json
 import traceback
 from collections.abc import Sequence
-from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
@@ -73,7 +73,7 @@ def trajectories_path(
     file's name can differ from the time Windows Explorer shows for it by
     the local offset.
     """
-    stamp = (when or datetime.now(timezone.utc)).strftime("%Y%m%d-%H%M%S")
+    stamp = (when or datetime.now(UTC)).strftime("%Y%m%d-%H%M%S")
     return directory / f"trajectories-{stamp}{variant_suffix(exclude_tools)}.jsonl"
 
 
@@ -197,7 +197,7 @@ def evaluate_case(case: dict, exclude_tools: Sequence[str] = ()) -> dict:
         # observability/runs.jsonl is its real per-turn record, and a suite run
         # would bury it.
         outputs = run_case(case_inputs(case), runs_log=EVAL_RUNS_LOG, exclude_tools=exclude_tools)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - one failed case must not stop the sweep
         return {
             "case_id": case["id"],
             "difficulty": case["difficulty"],
@@ -211,7 +211,7 @@ def evaluate_case(case: dict, exclude_tools: Sequence[str] = ()) -> dict:
         try:
             for item in _feedback_items(evaluator(outputs=outputs, reference_outputs=reference)):
                 scores[item["key"]] = item.get("score")
-        except Exception as exc:  # a broken evaluator must not lose the run
+        except Exception as exc:  # noqa: BLE001 - a broken evaluator must not lose the run
             scores[getattr(evaluator, "__name__", "evaluator")] = None
             print(f"  ! {case['id']}: {getattr(evaluator, '__name__', '?')} raised {exc}")
 
@@ -361,7 +361,7 @@ def run_local(
 
     # One moment for everything this invocation leaves behind, so its
     # majority and its trajectories carry the same stamp.
-    finished = datetime.now(timezone.utc)
+    finished = datetime.now(UTC)
 
     summary = None
     if runs > 1:

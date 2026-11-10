@@ -321,7 +321,6 @@ def test_the_debate_station_still_cannot_log():
     """The fix must not become "give debate a log tool". The read/write split
     per station is the guarantee; the idea gets closed and the next turn logs."""
     from agent.graph import build_agent
-
     from tests.conftest import StubChatModel
 
     agent = build_agent(model=StubChatModel(responses=[]))
@@ -339,7 +338,6 @@ def test_every_station_that_can_add_is_told_to_look_first():
     blind" -- a new station with add_measure and no rule would reopen it.
     """
     from agent.graph import build_agent
-
     from tests.conftest import StubChatModel
 
     agent = build_agent(model=StubChatModel(responses=[]))

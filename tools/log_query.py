@@ -23,7 +23,7 @@ digest failing should never take down anything else.
 from __future__ import annotations
 
 import csv
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +42,7 @@ def _read_rows(path: Path | None = None) -> list[dict[str, str]]:
             return []
         with log_path.open(newline="", encoding="utf-8") as f:
             return list(csv.DictReader(f))
-    except Exception:
+    except Exception:  # noqa: BLE001 - an unreadable log counts as no data
         return []
 
 
@@ -54,7 +54,7 @@ def _parse_timestamp(raw: str | None) -> datetime | None:
     except (ValueError, TypeError):
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
+        return parsed.replace(tzinfo=UTC)
     return parsed
 
 
@@ -99,9 +99,9 @@ def analyze_stress_patterns(
     refer to. A rating written this week about last week's measure is this
     week's news, which is what the digest is for.
     """
-    reference = now or datetime.now(timezone.utc)
+    reference = now or datetime.now(UTC)
     if reference.tzinfo is None:
-        reference = reference.replace(tzinfo=timezone.utc)
+        reference = reference.replace(tzinfo=UTC)
     cutoff = reference - timedelta(days=window_days)
 
     labels = measure_labels(measures_path)

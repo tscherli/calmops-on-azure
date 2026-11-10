@@ -136,8 +136,7 @@ SEARCH_RESULTS = 5
 
 # Words that would match half the list and say nothing about what was asked.
 _SEARCH_STOPWORDS = frozenset(
-    "the and for with your you this that what into from about list measure measures already "
-    "there have does something".split()
+    ["the", "and", "for", "with", "your", "you", "this", "that", "what", "into", "from", "about", "list", "measure", "measures", "already", "there", "have", "does", "something"]
 )
 
 

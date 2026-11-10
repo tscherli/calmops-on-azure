@@ -14,8 +14,8 @@ import shutil
 import tempfile
 import time
 import uuid
-from pathlib import Path
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
@@ -29,8 +29,13 @@ from agent.safety import screen_for_crisis
 from observability.tracing import RunRecorder, summarize_turn
 from tools import checkin_log
 from tools.checkin_log import append_checkin_row, read_checkin_rows
-from tools.measures import MEASURE_COLUMNS, MEASURES_PATH, append_measure, measure_ids
-from tools.measures import _clean_measure_text
+from tools.measures import (
+    MEASURE_COLUMNS,
+    MEASURES_PATH,
+    _clean_measure_text,
+    append_measure,
+    measure_ids,
+)
 
 # Role vocabulary must match dataset.jsonl's hand-authored reference_trajectory
 # entries exactly ("human"/"ai"/"tool") -- agentevals' structural comparison
@@ -227,7 +232,7 @@ def _nodes_run(graph: Any, config: dict) -> list[str]:
             for node in snapshot.next
             if not node.startswith("__")
         ]
-    except Exception:
+    except Exception:  # noqa: BLE001 - silent on purpose, see the docstring
         return []
 
 
@@ -480,7 +485,7 @@ def run_case(
                       "side_calls": result.get("side_calls") or []}
             turn = recorder.record_turn(*args, **kwargs) if recorder else summarize_turn(*args, **kwargs)
             _add_turn(usage, turn)
-        except Exception:  # a cost record must never fail a case
+        except Exception:  # noqa: BLE001, S110 - a cost record must never fail a case
             pass
         state = next_turn_state(result)
 

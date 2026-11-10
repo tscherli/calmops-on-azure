@@ -336,8 +336,8 @@ def test_a_want_forces_its_tool_only_when_its_inputs_are_known(state, waiting, e
         (LOG_QUESTION, True),
         # The model's own rephrasings, as recorded in the runs.
         ("Would you like to check this current situation into the circumstances log?", True),
-        ("Great -- I'll note that you chose both. Would you like to check in the current situation "
-         "into the circumstances log?", True),
+        (("Great -- I'll note that you chose both. Would you like to check in the current situation "
+         "into the circumstances log?"), True),
         ("Two from your list that fit: box breathing and a short walk.", False),
     ],
 )

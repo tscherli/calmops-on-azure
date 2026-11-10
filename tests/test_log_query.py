@@ -10,7 +10,7 @@ a wrong count is a false statement about the user's own history, phrased
 warmly.
 """
 import csv
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -232,7 +232,7 @@ def test_energy_is_counted_from_check_ins_only(log_path, measures_file):
 
 def test_rows_older_than_the_window_are_excluded(log_path, measures_file):
     checkin(log_path)
-    future_now = datetime.now(timezone.utc) + timedelta(days=30)
+    future_now = datetime.now(UTC) + timedelta(days=30)
 
     result = summary(log_path, measures_file, window_days=7, now=future_now)
 

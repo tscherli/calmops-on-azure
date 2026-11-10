@@ -17,9 +17,8 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-import observability.tracing as tracing
-import tools.checkin_log as checkin_log
-import tools.measures as measures
+from observability import tracing
+from tools import checkin_log, measures
 
 DATA_DIR_ENV = "CALMOPS_DATA_DIR"
 

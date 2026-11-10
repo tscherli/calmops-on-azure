@@ -30,7 +30,13 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
 from agent.common import format_tool_event, message_text
-from agent.data_paths import DATA_DIR_ENV, DEFAULT_CONSENT_PATH, DataPaths, data_paths, prepare
+from agent.data_paths import (
+    DATA_DIR_ENV,
+    DEFAULT_CONSENT_PATH,
+    DataPaths,
+    data_paths,
+    prepare,
+)
 from agent.graph import build_agent, next_turn_state
 from agent.model import DEFAULT_MODEL
 from agent.prompts import choice_sentence
@@ -446,7 +452,7 @@ class ChatApp:
             result = append_checkin_row(
                 measure_id=self.last_measure_id, helpfulness=value, path=self.log_path
             )
-        except Exception as exc:  # never let an unhandled exception reach the UI
+        except Exception as exc:  # noqa: BLE001 - never let an unhandled exception reach the UI
             self._append_message("App", f"Something went wrong saving that: {exc}")
             return
 
@@ -591,7 +597,7 @@ class ChatApp:
                 elif mode == "values":
                     final = {k: v for k, v in chunk.items() if k != "__interrupt__"}
             events.put(("interrupt", paused) if paused is not None else ("done", final))
-        except Exception as exc:  # never let an unhandled exception reach the UI
+        except Exception as exc:  # noqa: BLE001 - never let an unhandled exception reach the UI
             events.put(("error", exc))
 
     def _drain(self, events: "queue.Queue", messages_before: list, start: float, config: dict) -> None:
@@ -631,7 +637,7 @@ class ChatApp:
                     # then froze. A failure has to be visible and recoverable.
                     try:
                         self._finish_turn(data, messages_before, time.time() - start)
-                    except Exception as exc:  # never let the UI lock up silently
+                    except Exception as exc:  # noqa: BLE001 - never let the UI lock up silently
                         self._append_message(
                             "App", f"Something went wrong finishing that turn: {exc}"
                         )

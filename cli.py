@@ -169,7 +169,7 @@ class Session:
         messages_before, config, started = self._turn
         try:
             final, self.paused = self._stream(graph_input, config)
-        except Exception as exc:  # never let a traceback end the session
+        except Exception as exc:  # noqa: BLE001 - never let a traceback end the session
             self.paused = None
             self.out(self._failure_text(exc))
             return

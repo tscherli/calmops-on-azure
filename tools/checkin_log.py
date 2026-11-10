@@ -22,7 +22,7 @@ from __future__ import annotations
 import csv
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -152,7 +152,7 @@ def append_checkin_row(
         wrote_checkin = first["row_id"]
 
     row = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "row_id": str(uuid.uuid4()),
         "energy": "" if rating else energy,
         "circumstances": "" if rating else circumstances,

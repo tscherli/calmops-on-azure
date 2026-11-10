@@ -6,6 +6,7 @@ broken piece can't take down the whole run (the reason this module exists
 is that a transient network failure destroyed a paid run's results).
 """
 import json
+from datetime import UTC
 
 import pytest
 
@@ -232,9 +233,9 @@ def test_a_run_never_overwrites_an_earlier_one(tmp_path):
 
 
 def test_each_run_is_named_for_the_utc_moment_it_was_written(tmp_path):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    when = datetime(2026, 9, 26, 14, 3, 15, tzinfo=timezone.utc)
+    when = datetime(2026, 9, 26, 14, 3, 15, tzinfo=UTC)
 
     assert run_local_module.trajectories_path(tmp_path, when).name == (
         "trajectories-20260926-140315.jsonl"

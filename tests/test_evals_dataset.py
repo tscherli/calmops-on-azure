@@ -22,9 +22,9 @@ these tests exist to prevent in the first place.
 from __future__ import annotations
 
 import json
-from itertools import combinations
 import shutil
 import tempfile
+from itertools import combinations
 from pathlib import Path
 
 import pytest
@@ -265,7 +265,7 @@ def assert_no_personal_text_leaked(cases: list[dict], logged: set) -> None:
             shared = _six_grams(text) & logged
             assert not shared, (
                 f"{case.get('id')} repeats a run of six words from the check-in log: "
-                f"{' '.join(sorted(shared)[0])!r} -- retype it, do not paste it"
+                f"{' '.join(min(shared))!r} -- retype it, do not paste it"
             )
 
 
