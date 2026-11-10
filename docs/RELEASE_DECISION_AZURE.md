@@ -13,7 +13,7 @@ Only the platform. The agent is v1.1, unchanged.
 |---|---|---|
 | Model | `gpt-5-mini` 2025-08-07 on api.openai.com | the same model on Microsoft Foundry, Germany West Central, Global Standard |
 | Login | OpenAI API key | Entra ID token, no key |
-| Libraries | the versions v1.1 was measured on | the same versions, pinned in `requirements.lock.txt` |
+| Libraries | the versions v1.1 was measured on | the same versions, pinned in `requirements.txt` (server) and `requirements-dev.txt` (tests, evals) |
 | Web search | on | on (tested on Azure first) |
 | In front of the model | the crisis gate | the crisis gate, then Azure's content filter; a self-harm block now gets the gate's help numbers instead of a raw error |
 

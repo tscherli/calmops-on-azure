@@ -1,0 +1,18 @@
+# Never sent to the Docker build: secrets, personal data, big folders.
+# The Dockerfile copies only named files, so this is the second lock.
+.env
+credentials.json
+token.json
+data/
+state/
+observability/runs.jsonl
+evals/results/
+notes/
+CLAUDE.local.md
+.claude/
+.git/
+.venv/
+venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/

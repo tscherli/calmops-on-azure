@@ -314,7 +314,7 @@ the other way (6/10 against 7/10), and over every valid run v1.0.0 passed it 14 
 
 The same agent and the same model (`gpt-5-mini` 2025-08-07), now on Microsoft Foundry in Germany
 West Central, with an Entra ID login instead of a key, the library versions v1.1 was measured on
-(`requirements.lock.txt`), web search on, and Azure's content filter in front of the model. The
+(pinned in `requirements.txt` and `requirements-dev.txt`), web search on, and Azure's content filter in front of the model. The
 judge stays on Gemini. Same 26 cases, three runs each; then the only split case (41) and case 39 --
 the one v1.1 was released against -- five more times each: **88 runs in all** (78 in the sweep, 10
 extra), 8 of them of case 39.
