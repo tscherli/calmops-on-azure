@@ -71,10 +71,11 @@ def _without_user_name(text: str) -> str:
     stacked in front of it: a Windows error quoted inside a tool message,
     repr'd, then JSON-encoded arrives with four. Found by the last check on the
     first real dry run -- the write-failure case's tool receipts quote the temp
-    path they could not write to.
+    path they could not write to. `home` covers Linux (e.g. /home/runner on the
+    GitHub Actions runner, where this was found).
     """
     name = re.escape(Path.home().name)
-    return re.sub(rf"(?i)(users(?:\\+|/+)){name}(?=\\|/)", r"\1<user>", text)
+    return re.sub(rf"(?i)((?:users|home)(?:\\+|/+)){name}(?=\\|/)", r"\1<user>", text)
 
 
 def sanitise_trajectory(record: dict) -> dict:
