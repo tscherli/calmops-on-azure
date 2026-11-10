@@ -20,9 +20,15 @@ export MSYS_NO_PATHCONV=1
 RG="rg-calmops"
 ACR="acrcalmopsts"
 APP_NAME="github-calmops-on-azure"
-REPO="tscherli/calmops-on-azure"
 CRED_NAME="github-main"
 # GitHub writes this "subject" into the token of a run on the main branch.
+# It holds the ID numbers of the owner and the repo, not only the names
+# (found on the first run, 2026-11-10: the name-only subject was refused).
+# IDs can't be taken over: a new repo with the same name, after a delete or a
+# rename, gets a new ID, so its runs would not get in.
+# Look them up: https://api.github.com/repos/tscherli/calmops-on-azure
+#   owner.id = 87180788 (tscherli), id = 1447259309 (calmops-on-azure)
+REPO="tscherli@87180788/calmops-on-azure@1447259309"
 SUBJECT="repo:${REPO}:ref:refs/heads/main"
 
 echo "1/4 App registration"
@@ -44,17 +50,22 @@ else
 fi
 
 echo "3/4 Federated credential (trust GitHub, main branch only)"
+CRED_JSON="{
+  \"name\": \"$CRED_NAME\",
+  \"issuer\": \"https://token.actions.githubusercontent.com\",
+  \"subject\": \"$SUBJECT\",
+  \"audiences\": [\"api://AzureADTokenExchange\"]
+}"
 HAS_CRED=$(az ad app federated-credential list --id "$APP_ID" --query "length([?name=='$CRED_NAME'])" --output tsv)
 if [ "$HAS_CRED" = "0" ]; then
-  az ad app federated-credential create --id "$APP_ID" --parameters "{
-    \"name\": \"$CRED_NAME\",
-    \"issuer\": \"https://token.actions.githubusercontent.com\",
-    \"subject\": \"$SUBJECT\",
-    \"audiences\": [\"api://AzureADTokenExchange\"]
-  }" --query "{name:name, subject:subject}" --output table
+  az ad app federated-credential create --id "$APP_ID" --parameters "$CRED_JSON" --output none
+  echo "    created"
 else
-  echo "    exists"
+  # Exists: set it again, so a changed subject in this script reaches Azure.
+  az ad app federated-credential update --id "$APP_ID" --federated-credential-id "$CRED_NAME" --parameters "$CRED_JSON"
+  echo "    updated"
 fi
+az ad app federated-credential list --id "$APP_ID" --query "[?name=='$CRED_NAME'].{name:name, subject:subject}" --output table
 
 echo "4/4 Role AcrPush on the registry only"
 # The assignment is deleted with the registry, so a rebuild must run this step again.
