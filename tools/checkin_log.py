@@ -311,10 +311,16 @@ def make_log_checkin(log_path: Path | str | None = None, measures_path: Path | s
         if status == "skipped":
             return _reply(f"Not logged: {result['reason']}.", tool_call_id, status="skipped")
         if status == "error":
+            # Plain words for the model, and no "saved" in them: the old text
+            # ended "saved to the pending file", and a reply built on it said
+            # the rating was recorded (case 39). The technical error is for the
+            # receipt. save_failed makes the reply open with SAVE_FAILED_LINE.
             return _reply(
-                f"Not logged: the write failed ({result['error']}); saved to the pending file.",
+                "NOT saved: writing to the log failed. A copy of the row waits in the pending file.",
                 tool_call_id,
                 status="error",
+                detail=f"write failed: {result['error']}"[:60],
+                save_failed=True,
             )
 
         is_checkin = result["kind"] == "checkin" or bool(result.get("checkin_row_id"))

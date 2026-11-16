@@ -218,8 +218,11 @@ UNPROMPTED = [HumanMessage(content="just record how today went please")]
         ({"reading": ["rate_measure"]}, "", None),
         ({**IDEA, "reading": ["rate_measure"]}, "breathe", None),
         ({**ON_SCREEN, "reading": ["other_suggestions"]}, "", "count_rejection"),
-        # Nothing on screen: nothing to count.
+        # Nothing on screen: nothing to count. With the energy known, the
+        # suggestions come first -- the one thing find_measures needs (case 39).
         ({"reading": ["other_suggestions"]}, "", None),
+        ({"reading": ["other_suggestions"], "energy": "exhausted"}, "", "suggest"),
+        ({**IDEA, "reading": ["other_suggestions"], "energy": "exhausted"}, "", None),
         ({**ON_SCREEN, **IDEA, "reading": ["other_suggestions"]}, "", None),
         ({"reading": ["own_idea"]}, "", "follow_up"),
         # With the idea already open, the state already points to `debate`.
@@ -286,6 +289,37 @@ def test_the_answer_forces_the_log_when_its_inputs_are_known():
     assert forced_tool(state, "") == "log_checkin"
     # A declined situation still leaves the log to the station.
     assert forced_tool({**state, "situation": SITUATION_DECLINED}, "") is None
+
+
+def test_case_39s_first_turn_suggests_once_the_energy_is_recorded(tmp_path, measures_file):
+    """"so wrung out. just give me something really quick": the energy is
+    recorded by `ask` during the turn, and the turn goes on to `suggest`
+    instead of back to `ask`, which asked for the situation in 2 of 8 Azure
+    runs and never reached the save."""
+    record = AIMessage(content="", tool_calls=[
+        {"name": "record_choices", "args": {"energy": "exhausted"}, "id": "r1"}])
+    lookup = AIMessage(content="", tool_calls=[{"name": "find_measures", "args": {}, "id": "f1"}])
+    graph, _ = graph_with(
+        reads("other_suggestions"), tmp_path, measures_file,
+        replies=[record, lookup, AIMessage(content="Two quick ones: take a few slow breaths.")],
+    )
+
+    state = {"messages": [HumanMessage(content="so wrung out. just give me something really quick")]}
+    nodes = [node for update in graph.stream(state, stream_mode="updates") for node in update]
+
+    assert nodes == ["understand", "ask", "tools", "suggest", "tools", "suggest"]
+
+
+def test_without_the_reading_the_recorded_energy_still_leads_to_ask(tmp_path, measures_file):
+    record = AIMessage(content="", tool_calls=[
+        {"name": "record_choices", "args": {"energy": "exhausted"}, "id": "r1"}])
+    graph, _ = graph_with(reads("checkin_answer"), tmp_path, measures_file,
+                          replies=[record, AIMessage(content="What would help most right now?")])
+
+    nodes = [node for update in graph.stream({"messages": [HumanMessage(content="exhausted")]},
+                                             stream_mode="updates") for node in update]
+
+    assert nodes == ["understand", "ask", "tools", "ask"]
 
 
 def test_case_39s_last_turn_reaches_the_log_with_the_situation_shown(tmp_path, measures_file):

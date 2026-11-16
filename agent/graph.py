@@ -97,6 +97,8 @@ from agent.prompts import (
     IDEA_TRY_WHAT_WAS_ADDED,
     NOTHING_TO_SAVE_YET,
     READ_PROMPT,
+    SAVE_FAILED_LINE,
+    SAVE_FAILED_NOTE,
     STATION_PROMPTS,
     debate_prompt,
     search_instruction,
@@ -229,6 +231,7 @@ class State(TypedDict, total=False):
     reading: list[str] | None   # what the understand node read the user to want, this turn
     reading_failed: bool        # the reader was asked this turn and gave no reading
     say_nothing_saved: bool     # this turn's reply opens with NOTHING_TO_SAVE_YET
+    save_failed: bool           # a log_checkin write failed this turn: the reply opens with SAVE_FAILED_LINE
     side_calls: list[AIMessage]  # model calls of this turn that left no message: the reader's
     approvals: dict[str, dict[str, Any]]  # the user's card decisions, by tool call id
     tool_events: Annotated[list[dict[str, Any]], merge_tool_events]
@@ -657,6 +660,8 @@ def route_for_reading(state: State, waiting: str = "") -> str | None:
       rating and no idea is open;
     - different suggestions -> `count_rejection`, while something is on screen
       and no idea is open (with nothing offered there is nothing to count);
+      with nothing offered yet and the energy known -> `suggest`
+      (`suggestions_first`);
     - go with their own idea -> `follow_up`, where discuss_idea is forced and
       the turn goes on to `debate`; with an idea already open, the state
       already points there.
@@ -682,9 +687,37 @@ def route_for_reading(state: State, waiting: str = "") -> str | None:
         return "follow_up"
     if first == "other_suggestions" and state.get("offered") and not idea_open:
         return "count_rejection"
+    if suggestions_first(state):
+        return "suggest"
     if first == "own_idea" and not idea_open:
         return "follow_up"
     return None
+
+
+def suggestions_first(state: State) -> bool:
+    """Does the user want suggestions before any were shown, with the energy known?
+
+    Then the turn goes to `suggest`, even with the goal or the situation still
+    open: the energy is the one thing find_measures needs. "so wrung out. just
+    give me something really quick" was read as other_suggestions in all 8
+    Azure runs of case 39, and the routing threw the reading away -- it only
+    counted it as a rejection once something was on screen. The turn went to
+    `ask`, whose prompt both asks for the situation first and allows a lookup
+    when asked, and the model picked one by chance: 2 of the 8 runs asked
+    instead and never reached the save (2026-11-05).
+
+    Used twice: at the start of a turn whose energy is already known, and in
+    `after_tools` right after record_choices -- in case 39 the energy is only
+    recorded during the first turn, by `ask`.
+    """
+    wants = effective_wants(state)
+    return (
+        bool(wants)
+        and wants[0] == "other_suggestions"
+        and not state.get("offered")
+        and bool(state.get("energy"))
+        and not state.get("idea")
+    )
 
 
 def forced_tool(state: State, waiting: str) -> str | None:
@@ -1018,16 +1051,24 @@ def build_agent(
 
     def _reply(chosen, prompt: str, state: State, *, trailing: str | None = None) -> AIMessage:
         messages: list[BaseMessage] = [SystemMessage(content=prompt), *state["messages"]]
-        if trailing:
-            messages.append(SystemMessage(content=trailing))
+        notes = [note for note in (trailing, SAVE_FAILED_NOTE if state.get("save_failed") else None) if note]
+        if notes:
+            messages.append(SystemMessage(content="\n\n".join(notes)))
         response = chosen.invoke(messages)
-        if state.get("say_nothing_saved") and not response.tool_calls:
+        # A failed save comes first: it happened this turn. The two cannot
+        # meet in practice -- a save that ran had a measure to be about.
+        opening = (
+            SAVE_FAILED_LINE if state.get("save_failed")
+            else NOTHING_TO_SAVE_YET if state.get("say_nothing_saved")
+            else None
+        )
+        if opening and not response.tool_calls:
             # Part of the reply, not a message of its own: the clients show
             # only the last message of a turn. A new id, because the words are
             # no longer what the provider returned; the usage stays, so the
             # turn's cost still counts the call.
             said = _said(response)
-            text = f"{NOTHING_TO_SAVE_YET}\n\n{said}" if said else NOTHING_TO_SAVE_YET
+            text = f"{opening}\n\n{said}" if said else opening
             response = response.model_copy(update={"content": text, "id": None})
         return response
 
@@ -1349,7 +1390,10 @@ def build_agent(
             or state.get("choices_clicked")
             or decided_in_code(state)
         ):
-            return {"reading": None, "reading_failed": False, "side_calls": [], "say_nothing_saved": False}
+            return {
+                "reading": None, "reading_failed": False, "side_calls": [],
+                "say_nothing_saved": False, "save_failed": False,
+            }
         try:
             result = reader.invoke(reading_input(state, measure_awaiting_rating(log_path)))
         except Exception:  # noqa: BLE001 - a failed reading falls back, it does not end the turn
@@ -1373,6 +1417,8 @@ def build_agent(
             "side_calls": [raw] if isinstance(raw, AIMessage) else [],
             # Set again only by nothing_to_save, for this turn alone.
             "say_nothing_saved": False,
+            # Set again only by a log_checkin write that fails, for this turn alone.
+            "save_failed": False,
         }
         # A log request that goes to follow_up -- the user answering the log
         # question -- while the user's own idea is open counts the idea as
@@ -1420,6 +1466,8 @@ def build_agent(
             return "debate"
         if name == "record_choices":
             # New answers mean a fresh lookup rather than more of the same.
+            if suggestions_first(state):
+                return "suggest"
             return station_for(state) if station_for(state) == "ask" else "suggest"
         if "idea_decided" in {m.name for m in _last_tool_batch(state["messages"])}:
             return "close_idea"

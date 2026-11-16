@@ -336,6 +336,20 @@ NOTHING_TO_SAVE_YET = (
     "and there isn't one in this conversation yet."
 )
 
+# A save that ran and failed (case 39). Code says it first, in the reply of the
+# turn the write failed in: left to the model, one Azure run of 8 answered a
+# failed rating with "Thanks -- I recorded that box breathing helped." and put
+# the failure in the next sentence, and another answered a failed check-in with
+# "I can log that" (2026-11-05). The note goes after the conversation, where the
+# model reads it last. It names no sentence to avoid: a quoted bad sentence is
+# one more example of it.
+SAVE_FAILED_LINE = "That wasn't saved -- writing to your log failed."
+SAVE_FAILED_NOTE = (
+    "The save you just tried failed: nothing was written to the log. Your reply already opens "
+    "with a sentence that says so, so don't repeat it. In this reply, don't call anything saved, "
+    "logged or recorded."
+)
+
 
 STATION_PROMPTS = {
     "ask": f"{STATION_BASE}\n\n{ASK_PROMPT}",
