@@ -347,6 +347,11 @@ is blocked until case 39 passes at least 8 of 10 runs with no false claim; a fal
 case ends the exception at once. **Fix:** after a failed save, code writes the first sentence, not the
 model. The decision in full: [RELEASE_DECISION_AZURE.md](RELEASE_DECISION_AZURE.md).
 
+**Closed on 2026-11-16.** After the fix, case 39 passed 9 of 10 runs with no false save claim, and
+the full sweep passed 26 of 26 cases by majority; the runs are in
+`evals/published/20261116-124417-azure-case39-fix/`, and the details in
+[RELEASE_DECISION_AZURE.md](RELEASE_DECISION_AZURE.md#the-fix-2026-11-16-exception-closed).
+
 A first sweep on Azure does not count: at 50,000 tokens per minute, 45 of 78 runs ended in `429
 rate_limit_exceeded` before the agent answered. The deployment was raised to 250,000 and the sweep
 run again.
