@@ -228,7 +228,12 @@ UNPROMPTED = [HumanMessage(content="just record how today went please")]
         # With the idea already open, the state already points to `debate`.
         ({**IDEA, "reading": ["own_idea"]}, "", None),
         ({"reading": ["checkin_answer"]}, "", None),
+        # A pick settles a measure: on to the station that asks the log
+        # question, even with the situation still open (case 39).
         ({"reading": ["pick_offered"]}, "", None),
+        ({**ON_SCREEN, "reading": ["pick_offered"]}, "", "follow_up"),
+        ({**ON_SCREEN, "reading": ["pick_offered", "log_checkin"]}, "", "follow_up"),
+        ({**ON_SCREEN, **IDEA, "reading": ["pick_offered"]}, "", None),
         ({"reading": ["unclear"]}, "", None),
         ({"reading": None}, "", None),
         ({"reading": []}, "", None),

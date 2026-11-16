@@ -673,8 +673,11 @@ def route_for_reading(state: State, waiting: str = "") -> str | None:
     in case 36 it called log_checkin before any measure was chosen, where
     v1.0.0 had kept the case in `ask`, which cannot log (dev log stage 83).
 
-    A check-in answer, a pick from the offer and anything unclear go where the
-    state points, as before.
+    A pick from the offer -> `follow_up`, where the log question is asked,
+    while something is on screen and no idea is open.
+
+    A check-in answer and anything unclear go where the state points, as
+    before.
     """
     wants = effective_wants(state)
     first = wants[0] if wants else None
@@ -689,6 +692,14 @@ def route_for_reading(state: State, waiting: str = "") -> str | None:
         return "count_rejection"
     if suggestions_first(state):
         return "suggest"
+    if first == "pick_offered" and state.get("offered") and not idea_open:
+        # A measure is settled, and the log question comes next -- which only
+        # follow_up asks. With the situation still open, the state pointed to
+        # `ask`, which cannot log: after an offer made before the situation
+        # was known (suggestions_first), case 39's "ill do the first one. save
+        # that." was read there as "add it to my list", and 4 of 10 Azure runs
+        # never reached the save (2026-11-16).
+        return "follow_up"
     if first == "own_idea" and not idea_open:
         return "follow_up"
     return None
