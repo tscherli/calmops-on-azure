@@ -15,6 +15,9 @@
 #   3. One assignment: my own account. Nobody else is on the list.
 #   4. A new client secret for the login, written straight into the app
 #      (never printed). Each run replaces the old secrets = a rotation.
+#      Since step 9 the secret lives in Key Vault: infra/09-keyvault.sh moves
+#      it there and does the rotation. A rerun of this script after step 9
+#      puts the secret back into the app (= undo of step 9).
 #   5. Easy Auth on the container app: every request without a valid login is
 #      sent to the Microsoft login page, before it reaches my code.
 #   6. Removes the IP rule "only-me" (step 5): the login replaces it.
