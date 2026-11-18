@@ -24,6 +24,9 @@ os.environ.setdefault("OPENAI_API_KEY", "sk-test-not-a-real-key")
 # Present but empty, so a real AZURE_OPENAI_ENDPOINT in `.env` cannot point
 # the suite at Azure and make it fetch Entra tokens.
 os.environ["AZURE_OPENAI_ENDPOINT"] = ""
+# The same for Application Insights: importing api.py must not start sending
+# telemetry from a test run.
+os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = ""
 # The tests assume the default (search on) and switch it off themselves where
 # they need to, whatever a local `.env` says.
 os.environ["OPENAI_ENABLE_WEB_SEARCH"] = "true"

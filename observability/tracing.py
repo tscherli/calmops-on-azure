@@ -21,6 +21,7 @@ with the rest. Counting only the conversation would report the reader as free.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -28,6 +29,8 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+
+logger = logging.getLogger("calmops.turns")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 RUNS_LOG_PATH = BASE_DIR / "observability" / "runs.jsonl"
@@ -239,6 +242,24 @@ class RunRecorder:
             side_calls=side_calls,
         )
         self._append(record)
+        # The same numbers as a log record. Locally nothing shows it (INFO, no
+        # handler). On Azure, api.py sends the "calmops" loggers to
+        # Application Insights, where a query can sum tokens and cost per
+        # day. Numbers and tool names only, never what the user wrote.
+        logger.info(
+            "turn finished",
+            extra={
+                "model": record.model,
+                "input_tokens": record.input_tokens,
+                "output_tokens": record.output_tokens,
+                "total_tokens": record.total_tokens,
+                "web_searches": record.web_searches,
+                "side_calls": record.side_calls,
+                "estimated_cost_usd": round(record.estimated_cost_usd, 6),
+                "latency_seconds": round(record.latency_seconds, 3),
+                "tools": ",".join(f"{t.name}:{t.status}" for t in record.tool_calls),
+            },
+        )
         return record
 
     def _append(self, record: TurnRecord) -> None:

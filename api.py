@@ -28,6 +28,7 @@ Entry point -- loads .env itself (same reason as app.py). Start it with:
 """
 import json
 import logging
+import os
 import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -38,6 +39,20 @@ from typing import Annotated, Any, Literal
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Application Insights, only where its connection string is set (on Azure).
+# It records each request (path, status, duration), each outgoing call (to
+# Foundry, for a token), and the "calmops" log records: errors and one line of
+# numbers per turn (observability/tracing.py). Never a request body, so never
+# what the user wrote.
+# It must start before FastAPI is imported: it swaps fastapi.FastAPI for a
+# class that records requests, and an app built from the class imported
+# earlier would record none.
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+
+    configure_azure_monitor(logger_name="calmops")
+    logging.getLogger("calmops").setLevel(logging.INFO)
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse

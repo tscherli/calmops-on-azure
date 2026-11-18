@@ -109,6 +109,26 @@ def test_run_recorder_appends_jsonl_line(tmp_path):
     assert entry["tool_calls"] == []
 
 
+def test_run_recorder_logs_the_numbers_but_not_the_conversation(tmp_path, caplog):
+    """On Azure this record goes to Application Insights, so it must carry
+    the turn's numbers and nothing the user or the model wrote."""
+    recorder = RunRecorder(log_path=tmp_path / "runs.jsonl", pricing=PRICING)
+    messages_before = [HumanMessage(content="my manager shouted at me")]
+    messages_after = messages_before + [
+        AIMessage(content="That sounds hard.", usage_metadata={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
+    ]
+
+    with caplog.at_level("INFO", logger="calmops.turns"):
+        recorder.record_turn(messages_before, messages_after, "test-model", 0.3)
+
+    [entry] = caplog.records
+    assert entry.getMessage() == "turn finished"
+    assert (entry.input_tokens, entry.output_tokens, entry.latency_seconds) == (10, 5, 0.3)
+    everything = json.dumps(entry.__dict__, default=str)
+    assert "manager" not in everything
+    assert "sounds hard" not in everything
+
+
 def test_run_recorder_appends_multiple_lines_across_calls(tmp_path):
     log_path = tmp_path / "runs.jsonl"
     recorder = RunRecorder(log_path=log_path, pricing=PRICING)
