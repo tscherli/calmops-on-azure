@@ -1,0 +1,35 @@
+// Step 10: three questions about the running app, in KQL.
+// Run them in the portal: log-calmops (or appi-calmops) > Logs.
+// The table names here are the workspace names (AppRequests, ...). In
+// appi-calmops > Logs the classic names work too (requests, dependencies,
+// traces), with other column names (duration instead of DurationMs).
+// Numbers in Properties are stored as text: toint()/todouble() first.
+
+// Query 1: which endpoint is slow, and which fails? (last 7 days)
+AppRequests
+| where TimeGenerated > ago(7d)
+| summarize calls = count(), failed = countif(Success == false),
+            p50_s = round(percentile(DurationMs, 50) / 1000, 1),
+            p95_s = round(percentile(DurationMs, 95) / 1000, 1)
+  by Name
+| order by p95_s desc
+
+// Query 2: how much of a turn is waiting for the model? (Foundry calls per day)
+AppDependencies
+| where TimeGenerated > ago(7d) and Target has "cognitiveservices"
+| summarize calls = count(), failed = countif(Success == false),
+            avg_s = round(avg(DurationMs) / 1000, 1),
+            p95_s = round(percentile(DurationMs, 95) / 1000, 1)
+  by day = bin(TimeGenerated, 1d)
+| order by day desc
+
+// Query 3: tokens and cost per day (one "turn finished" record per turn)
+AppTraces
+| where TimeGenerated > ago(30d) and Message == "turn finished"
+| summarize turns = count(),
+            tokens = sum(toint(Properties.total_tokens)),
+            cost_usd = round(sum(todouble(Properties.estimated_cost_usd)), 4),
+            avg_turn_s = round(avg(todouble(Properties.latency_seconds)), 1),
+            web_searches = sum(toint(Properties.web_searches))
+  by day = bin(TimeGenerated, 1d)
+| order by day desc
